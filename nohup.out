@@ -1,0 +1,21 @@
+[I 17:48:45.272 NotebookApp] Serving notebooks from local directory: /home/ec2-user/.jupyter
+[I 17:48:45.272 NotebookApp] The Jupyter Notebook is running at:
+[I 17:48:45.273 NotebookApp] http://172.30.0.35:8888/
+[I 17:48:45.273 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[W 17:48:45.273 NotebookApp] No web browser found: could not locate runnable browser.
+[I 17:48:57.774 NotebookApp] Interrupted...
+[I 17:48:57.774 NotebookApp] Shutting down 0 kernels
+[I 17:49:25.866 NotebookApp] Serving notebooks from local directory: /home/ec2-user/.jupyter
+[I 17:49:25.866 NotebookApp] The Jupyter Notebook is running at:
+[I 17:49:25.866 NotebookApp] http://172.30.0.35:8888/
+[I 17:49:25.866 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[W 17:49:25.866 NotebookApp] No web browser found: could not locate runnable browser.
+[I 17:51:20.647 NotebookApp] Interrupted...
+[I 17:51:20.647 NotebookApp] Shutting down 0 kernels
+[I 17:51:23.881 NotebookApp] Serving notebooks from local directory: /home/ec2-user/.jupyter
+[I 17:51:23.881 NotebookApp] The Jupyter Notebook is running at:
+[I 17:51:23.881 NotebookApp] http://172.30.0.35:8888/
+[I 17:51:23.881 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[W 17:51:23.882 NotebookApp] No web browser found: could not locate runnable browser.
+[I 17:51:44.546 NotebookApp] Interrupted...
+[I 17:51:44.546 NotebookApp] Shutting down 0 kernels
