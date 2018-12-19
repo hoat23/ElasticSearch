@@ -14,9 +14,9 @@ from time import time
 # Import local lybraries
 from utils import *
 ########################################################################################
-URL = "https://658b9b529aee44339307affc751190da.us-east-1.aws.found.io:9243" #key/webhooks
+URL = "https://******da.us-east-1.aws.found.io:9243" #key/webhooks
 USER = "elastic"
-PASS = "m1T9E22JBuR12zxlMhFYasZp"
+PASS = "******************"
 #######################################################################################
 class elasticsearch():            
     def __init__(self, url=None, user=None , pas=None):
