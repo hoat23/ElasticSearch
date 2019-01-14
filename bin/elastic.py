@@ -5,18 +5,17 @@
 # Description: Server to conect Streak - Webhoook
 # Link: https://ogma-dev.github.io/posts/simple-flask-webhook/
 # sys.setdefaultencoding('utf-8') #reload(sys)
+########### from flask import Flask, request, abort
 #########################################################################################
 import sys, requests, json
 from datetime import datetime, timedelta
-from flask import Flask, request, abort
 from time import time
 ########################################################################################
-# Import local lybraries
 from utils import *
 ########################################################################################
-URL = "https://******da.us-east-1.aws.found.io:9243" #key/webhooks
-USER = "elastic"
-PASS = "******************"
+URL = "https://1a73070e08904a8d842d7b43e7be8c1f.us-east-1.aws.found.io:9243" #key/webhooks
+USER = "ingest"
+PASS = "8f22b470fe57c1f4949a91ce6b1a305f0ccab38d"
 #######################################################################################
 class elasticsearch():            
     def __init__(self, url=None, user=None , pas=None):
@@ -42,7 +41,11 @@ class elasticsearch():
         self.index = None
         self.type = None
 
+    def get_url_elk(self):
+        return self.url_elk
+
     def req_get(self, URL_API,data=""):
+        if (URL_API==None): URL_API = self.url_elk
         if (len(data)>0):
             headers = {'Content-Type': 'application/json'}
             data = json.dumps(data)
@@ -52,13 +55,34 @@ class elasticsearch():
         
         if not( (rpt.status_code)==200 or (rpt.status_code)==201 ):
             print("[GET]: "+ str(rpt.status_code) +" | "+ str(rpt.reason))
-        #json_pretty = json.loads(rpt.text)
-        json_rpt = rpt.json()
-        #print(json.dumps(json_pretty, indent=2, sort_keys=True))
+        
+        try:
+            json_rpt = rpt.json()
+            #json_pretty = json.loads(rpt.text)
+            #print(json.dumps(json_pretty, indent=2, sort_keys=True))
+        except:
+            json_rpt = rpt.text
+               
         return json_rpt
     
-    def req_post(self, URL_API, data):
+    def req_put(self, URL_API, data):
+        if (URL_API==None): URL_API = self.url_elk
         headers =  {'Content-Type': 'application/json'}
+        if (URL_API==None): URL_API = self.url_elk
+        if type(data) != str :
+            data = json.dumps(data)
+
+        rpt = requests.put(URL_API, auth=(self.user,self.pas), headers=headers, data = data )
+        
+        if not( (rpt.status_code)==200 or (rpt.status_code)==201 ):
+            print("[PUT]:"+str(rpt.status_code)+" | "+ str(rpt.reason) )
+        
+        return
+    
+    def req_post(self, URL_API, data):
+        if (URL_API==None): URL_API = self.url_elk
+        headers =  {'Content-Type': 'application/json'}
+        if (URL_API==None): URL_API = self.url_elk
         if type(data) != str :
             data = json.dumps(data)
 
@@ -143,6 +167,13 @@ class elasticsearch():
         print("\nnum: "+str(num_values))
         return values, num_values
     
+    def put_data(self, INDEX, data):
+        URL = self.url_elk + "/" + INDEX 
+        #json_data=json.loads(data)
+        #print_json(json_data)
+        self.req_put(URL,data)
+        return
+
     def set_data(self, INDEX, TYPE, ID, data):
         URL = self.url_elk + "/" + INDEX + "/" + TYPE + "/"+ ID
         #json_data=json.loads(data)
@@ -154,8 +185,8 @@ class elasticsearch():
         URL = self.url_elk + "/" + INDEX + "/" + TYPE + "/"+ ID
         json_rpt = self.req_get(URL)
         return json_rpt
-    
-    def delete_by_index(self, INDEX):
+
+    def delete_by_index(self,INDEX):
         URL = self.url_elk + "/" + INDEX
         json_rpt = self.req_del(URL)
         return
@@ -194,7 +225,9 @@ class elasticsearch():
         print("[POST_BULK] Elapsed time : %.10f seconds\n" % elapsed_time)
         return
     
-    #@count_elapsed_time
+    def algorithm(self,data):
+        raise NotImplementedError()
+
     def algorithm_process_data(self,data):
         FECHA_REGISTRO="2018-11-21 17:51:29"
 
@@ -275,7 +308,8 @@ class elasticsearch():
             data.update({"AMC_status":"NO APLICA"})
 
         return data
-
+    #######################################################################################    
+    #@count_elapsed_time
     def process_data(self, INDEX,TYPE=""):
         list_element, length = self.get_all_element(INDEX=INDEX,TYPE="")
         #print(str(length))
@@ -293,12 +327,10 @@ class elasticsearch():
                         "_source":data
                     })
                 #self.set_data( e["_index"] , e["_type"] , e["_id"] , data )
-                #print_json(data)
             except Exception as err:
                 print("\r Except...  "+"_id:"+e["_id"] + ": [ERROR :" + str(err)+"]")
             finally:
                 cont = cont + 1
-                #print("\r Process... "+str(cont) +":" + str(length) )
         elapsed_time = time() - start_time
         print("\n[PROCESS_DATA] Elapsed time : %.10f seconds\n" % elapsed_time)
         self.post_bulk(list_data)
@@ -308,15 +340,31 @@ class elasticsearch():
         INDEX = "repsol_data"
         self.process_data(INDEX,"_doc")
         return
-
+#######################################################################################
 def test():
     print("Test class elastic")
-    elk=elasticsearch()
-    elk.process_repsol()
-    return
+    ec=elasticsearch()
+    #rpt_json = ec.req_get(ec.get_url_elk() + "/_cat/indices?v")
+    rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state")
+    print(rpt_json)
+    
 
-#elk.get_hits(INDEX="cars",TYPE="transactions")
-#elk.get_hits(INDEX="repsol")
-#elk.set_data("repsoll","_doc","7x8uV2cBidP485DQW1F5", {"Versión de producto (VirusScan Enterprise)":"HOAT23"} )
-#elk.set_data("repsoll","_doc","-x8uV2cBidP485DQW1F5", {"Versión de producto (VirusScan Enterprise)":"HOAT23"} )
-#elk.get_by_id("cars","transactions","1")
+    """
+    lista_json = loadCSVtoJSON("Todos_los_equipos_Peru.csv")
+    ec.delete_by_index("repsol")
+    ec.post_bulk(lista_json,headers={"index":{"_index":"repsol","_type":"_doc"}})
+    ec.process_repsol()
+    ec.algorithm()
+    """
+    
+    #ec.get_hits(INDEX="cars",TYPE="transactions")
+    #ec.get_hits(INDEX="repsol")
+    #ec.set_data("repsoll","_doc","7x8uV2cBidP485DQW1F5", {"Versión de producto (VirusScan Enterprise)":"HOAT23"} )
+    #ec.set_data("repsoll","_doc","-x8uV2cBidP485DQW1F5", {"Versión de producto (VirusScan Enterprise)":"HOAT23"} )
+    #ec.get_by_id("cars","transactions","1")
+    return
+#######################################################################################
+if __name__=="__main__":
+    print("Running file python . . .\n\t["+str(__file__)+"]")
+    test()
+#######################################################################################
