@@ -13,9 +13,9 @@ from time import time
 ########################################################################################
 from utils import *
 ########################################################################################
-URL = "https://1a73070e08904a8d842d7b43e7be8c1f.us-east-1.aws.found.io:9243" #key/webhooks
-USER = "ingest"
-PASS = "8f22b470fe57c1f4949a91ce6b1a305f0ccab38d"
+URL = "https://1232343543345.us-east-1.aws.found.io:9243" #key/webhooks
+USER = "user"
+PASS = "password"
 #######################################################################################
 class elasticsearch():            
     def __init__(self, url=None, user=None , pas=None):
