@@ -14,16 +14,23 @@ def print_json(json_obj):
     print(json.dumps(json_obj, indent=2, sort_keys=True))
     return
 #######################################################################################
-def count_elapsed_time(f):
+def print_list(lista):
+    num = 0
+    for item in lista:
+        print("\t{0:03d}. {1} ".format( num, item) )
+        num+=1
+    return
+#######################################################################################
+def count_elapsed_time(f,*args,**kwargs):
     """
     Decorator.
     Calculate the elapsed time of a function.
     """
-    def wrapper():
+    def wrapper(*args):
         start_time = time()
-        ret = f()
+        ret = f(*args,**kwargs)
         elapsed_time = time() - start_time
-        print("Elapsed time: %0.10f seconds." % elapsed_time)
+        print("[count_elapsed_time] "+f.__name__+"Elapsed time: %0.10f seconds." % elapsed_time)
         return ret
     return wrapper
 #######################################################################################
@@ -37,7 +44,4 @@ def loadCSVtoJSON(path):
     
     print("["+str(path)+"] -> Datos cargados:" + str(len(list_data)))
     return list_data
-#######################################################################################
-
-
 #######################################################################################

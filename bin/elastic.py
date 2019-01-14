@@ -167,10 +167,12 @@ class elasticsearch():
         print("\nnum: "+str(num_values))
         return values, num_values
     
-    def put_data(self, INDEX, data):
+    def put_data(self, INDEX, data, print=False):
         URL = self.url_elk + "/" + INDEX 
-        #json_data=json.loads(data)
-        #print_json(json_data)
+        if(print):
+            #json_data=json.loads(data) 
+            print_json(data)
+        
         self.req_put(URL,data)
         return
 
