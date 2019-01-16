@@ -65,29 +65,28 @@ class elasticsearch():
                
         return json_rpt
     
-    def req_put(self, URL_API, data):
+    def req_put(self, URL_API, data,timeout=None):
         if (URL_API==None): URL_API = self.url_elk
         headers =  {'Content-Type': 'application/json'}
         if (URL_API==None): URL_API = self.url_elk
         if type(data) != str :
             data = json.dumps(data)
 
-        rpt = requests.put(URL_API, auth=(self.user,self.pas), headers=headers, data = data )
+        rpt = requests.put(URL_API, auth=(self.user,self.pas), headers=headers, data = data, timeout=timeout)
         
         if not( (rpt.status_code)==200 or (rpt.status_code)==201 ):
             print("[PUT]:"+str(rpt.status_code)+" | "+ str(rpt.reason) )
         
         return
     
-    def req_post(self, URL_API, data):
+    def req_post(self, URL_API, data,timeout=None):
         if (URL_API==None): URL_API = self.url_elk
         headers =  {'Content-Type': 'application/json'}
         if (URL_API==None): URL_API = self.url_elk
         if type(data) != str :
             data = json.dumps(data)
-
-        rpt = requests.post(URL_API, auth=(self.user,self.pas), headers=headers, data = data )
         
+        rpt = requests.post(URL_API, auth=(self.user,self.pas), headers=headers, data = data , timeout=timeout)
         if not( (rpt.status_code)==200 or (rpt.status_code)==201 ):
             print("[POST]:"+str(rpt.status_code)+" | "+ str(rpt.reason) )
         
@@ -167,13 +166,22 @@ class elasticsearch():
         print("\nnum: "+str(num_values))
         return values, num_values
     
-    def put_data(self, INDEX, data, print=False):
+    def put_data(self, INDEX, data, print=False,timeout=None):
         URL = self.url_elk + "/" + INDEX 
         if(print):
             #json_data=json.loads(data) 
             print_json(data)
         
-        self.req_put(URL,data)
+        self.req_put(URL,data,timeout=None)
+        return
+
+    def post_data(self, INDEX, data, print=False,timeout=None):
+        URL = self.url_elk + "/" + INDEX 
+        if(print):
+            #json_data=json.loads(data) 
+            print_json(data)
+        
+        self.req_post(URL,data)
         return
 
     def set_data(self, INDEX, TYPE, ID, data):
@@ -196,6 +204,11 @@ class elasticsearch():
     def delete_by_id(self, INDEX, TYPE, ID):
         URL = self.url_elk + "/" + INDEX + "/" + TYPE + "/"+ ID
         json_rpt = self.req_del(URL)
+        return
+
+    def delete_by_list_of_index(self, LIST_INDEX):
+        for INDEX in LIST_INDEX:
+            self.delete_by_index(INDEX)
         return
 
     def post_bulk(self,list_data,headers=None):
