@@ -9,6 +9,8 @@ import sys, requests, json, csv
 from datetime import datetime, timedelta
 from flask import Flask, request, abort
 from time import time
+import os
+from subprocess import Popen, PIPE
 ########################################################################################
 def print_json(json_obj):
     print(json.dumps(json_obj, indent=2, sort_keys=True))
@@ -44,4 +46,32 @@ def loadCSVtoJSON(path):
     
     print("["+str(path)+"] -> Datos cargados:" + str(len(list_data)))
     return list_data
+#######################################################################################
+def isAliveIP(host, count=1, timeout=1000):
+    if sys.platform == 'win32':
+        count_arg = '-n'
+        timeout_arg = '-w'
+    else:
+        count_arg = '-c'
+        timeout_arg = '-W'
+
+    args = map(str, [ 'ping', count_arg, count, timeout_arg, timeout, host ])
+
+    p = Popen(args, stdout=PIPE, stderr=PIPE)
+    output, err = p.communicate()
+
+    # success
+    val = p.returncode
+    if p.returncode == 0:
+        #try:
+            #m = re.search("time=(\d+(?:\.\d+){0,1})\s*ms", output)
+            #time = float(m.group(1))
+            #time = 1
+        #except Exception, e:
+        #	time = -1
+        return True
+    else:
+        #time = None
+        return False    
+    #return (time, p.returncode)
 #######################################################################################
