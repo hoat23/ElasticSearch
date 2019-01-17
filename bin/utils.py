@@ -8,8 +8,7 @@
 import sys, requests, json, csv
 from datetime import datetime, timedelta
 from flask import Flask, request, abort
-from time import time
-import os
+import time, os, socket
 from subprocess import Popen, PIPE
 ########################################################################################
 def print_json(json_obj):
@@ -23,15 +22,22 @@ def print_list(lista):
         num+=1
     return
 #######################################################################################
+def fileTXT_save(text, nameFile = "fileTXT_save.txt"):
+    fnew  = open(nameFile,"wb")
+    fnew.write(text.encode('utf-8')) # str(aux=[line])+'\n'
+    fnew.close() 
+    return
+#######################################################################################
 def count_elapsed_time(f,*args,**kwargs):
     """
     Decorator.
     Calculate the elapsed time of a function.
     """
     def wrapper(*args):
-        start_time = time()
+        #from time import time
+        start_time = time.time()
         ret = f(*args,**kwargs)
-        elapsed_time = time() - start_time
+        elapsed_time = time.time() - start_time
         print("[count_elapsed_time] "+f.__name__+"Elapsed time: %0.10f seconds." % elapsed_time)
         return ret
     return wrapper
@@ -74,4 +80,28 @@ def isAliveIP(host, count=1, timeout=1000):
         #time = None
         return False    
     #return (time, p.returncode)
+###############################################################################
+def send_json(msg, IP="0.0.0.0", PORT = 2233):
+    """
+        #Configuracion en /etc/logstash/conf.d/logstash-syslog.conf
+        input{
+            tcp{
+                port => [PORT_NUMBER]
+                codec => json
+            }
+        }
+    """
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect( (IP,PORT) )
+        #print "sending message: "+str(msg)
+        datajs = json.dumps(msg)
+        sock.sendall( datajs.encode() )
+    except:
+        print("Error inesperado: "+sys.exc_info()[0])
+        #sys.exit(1)
+        return
+    finally:
+        sock.close()
+        return
 #######################################################################################
