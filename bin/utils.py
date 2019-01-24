@@ -42,6 +42,19 @@ def count_elapsed_time(f,*args,**kwargs):
         return ret
     return wrapper
 #######################################################################################
+def list2json(list_field, list_value):
+    data_json = {}
+    len_field = len(list_field)
+    len_value = len(list_value)
+    if (len_field!=len_value):
+        print("[ERROR] list2json len_field:{0} & len_value:{1}".format(len_field,len_value))
+    else:
+        for i in range(0,len_field):
+            if (len(list_value[i])>0 and len(list_field[i])>0):
+                data_json.update({list_field[i] : list_value[i]})
+    return data_json
+#######################################################################################
+
 def loadCSVtoJSON(path):
     csvfile = open(path)
     data = csv.DictReader(csvfile)
