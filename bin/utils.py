@@ -107,10 +107,13 @@ def send_json(msg, IP="0.0.0.0", PORT = 2233):
             }
         }
     """
+    if(type(PORT)==str):
+        PORT = int(PORT)
+    
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect( (IP,PORT) )
-        #print "sending message: "+str(msg)
+        print("sending message: "+str(msg))
         datajs = json.dumps(msg)
         sock.sendall( datajs.encode() )
     except:
