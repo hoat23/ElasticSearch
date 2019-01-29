@@ -7,9 +7,8 @@
 # sys.setdefaultencoding('utf-8') #reload(sys)
 ########### from flask import Flask, request, abort
 #########################################################################################
-import sys, requests, json
+import sys, requests, json, time
 from datetime import datetime, timedelta
-from time import time
 ########################################################################################
 from utils import *
 ########################################################################################
@@ -214,7 +213,7 @@ class elasticsearch():
     def post_bulk(self,list_data,headers=None):
         data2sent = ""
         cont = 0
-        start_time = time()
+        start_time = time.time()
         for lista in list_data : 
             if(headers==None):
                 #--------------------------------------------------------------------------------
@@ -236,7 +235,7 @@ class elasticsearch():
             data2sent = data2sent +json.dumps(header_temp)+"\n"+json.dumps(body_temp) + "\n"
         URL = self.url_elk + "/_bulk"
         self.req_post(URL , data2sent )
-        elapsed_time = time() - start_time
+        elapsed_time = time.time() - start_time
         print("[POST_BULK] Elapsed time : %.10f seconds\n" % elapsed_time)
         return
     
@@ -329,7 +328,7 @@ class elasticsearch():
         list_element, length = self.get_all_element(INDEX=INDEX,TYPE="")
         #print(str(length))
         #self.show_all_idx(INDEX=INDEX,TYPE="")
-        start_time = time()
+        start_time = time.time()
         cont = 0
         list_data = []
         for e in list_element:
@@ -346,7 +345,7 @@ class elasticsearch():
                 print("\r Except...  "+"_id:"+e["_id"] + ": [ERROR :" + str(err)+"]")
             finally:
                 cont = cont + 1
-        elapsed_time = time() - start_time
+        elapsed_time = time.time() - start_time
         print("\n[PROCESS_DATA] Elapsed time : %.10f seconds\n" % elapsed_time)
         self.post_bulk(list_data)
         return
