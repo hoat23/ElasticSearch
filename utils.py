@@ -46,18 +46,21 @@ def list2json(list_field, list_value,remove_char=None):
     data_json = {}
     len_field = len(list_field)
     len_value = len(list_value)
-    if (len_field!=len_value):
-        print("[ERROR] list2json len_field:{0} & len_value:{1}".format(len_field,len_value))
-        #print(str(list_field))        print(str(list_value))
+    if (len_field>len_value):
+        print("[ERROR] list2json len_field:{0} > len_value:{1}".format(len_field,len_value))
+        print(str(list_field))
+        print(str(list_value))
     else:
         for i in range(0,len_field):
-            if (len(list_value[i])>0 and len(list_field[i])>0):
-                if(remove_char!=None):
-                    list_value[i]=list_value[i].replace(remove_char,"")
-                data_json.update({list_field[i] : list_value[i]})
+            if (len(list_field[i])>0):
+                if (len(list_value[i])>0):
+                    if(remove_char!=None):
+                        list_value[i]=list_value[i].replace(remove_char,"")
+                    data_json.update({list_field[i] : list_value[i]})
+                else:
+                    print("[WARN] field value lost [{0}]".format(list_value[i]))
     return data_json
 #######################################################################################
-
 def loadCSVtoJSON(path):
     csvfile = open(path)
     data = csv.DictReader(csvfile)
