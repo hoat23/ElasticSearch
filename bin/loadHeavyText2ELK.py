@@ -7,30 +7,38 @@
 #########################################################################################
 from elastic import *
 from utils import *
+import re
 import time
+import datetime
 
 nameHeavyFile = 'padron_reducido_ruc.txt'
 
 char_sep = '|'
 
-num_lines = 50
+block_size = 10E6
 cont = 0
-input_file = open(nameHeavyFile,'r')
+input_file = open(nameHeavyFile,'rb')
+print("[{0}] [START]".format(datetime.datetime.utcnow().isoformat() ) )
 while(1):
     cont = cont + 1 
-    line = input_file.readline().replace('\n',"")
-    if(cont==1):
-        header_fields = line.split(char_sep)
-    else:
-        body_fields = line.split(char_sep)
-        data_json = list2json(header_fields, body_fields)
-        data_json.update({'rename_index':'sunat',"num_id":cont})
-        try:
-            if(data_json["RUC"]=="20603496842"):
-                print_json(data_json)
+    try:
+        line = input_file.readline()
+        line = line.decode('utf-8',errors='replace')
+        re.sub('[^a-zA-Z0-9-_*.]', '', line) #https://platzi.com/blog/expresiones-regulares-python/
+        
+        if(cont==1):
+            header_fields = line.split(char_sep)
+        else:
+            body_fields = line.split(char_sep)
+            data_json = list2json(header_fields, body_fields)
+            if(len(data_json)==0):
+                print("[{0}] {1}".format(datetime.datetime.utcnow().isoformat(),  cont))
+            data_json.update({'rename_index':'sunat',"num_id":cont})
+            #print_json(data_json)
             #send_json(data_json,IP="54.208.72.130 ",PORT=5959)
             #cont 308174  436693
-        except:
-            print("--> "+ str(cont))
-            print(str(line))
-
+        if(cont%block_size==0):
+            print("[{0}] [{1}]".format(datetime.datetime.utcnow().isoformat(),cont) )
+    except:
+        print("[{0}] [ERROR | {1} | {2} ]".format(datetime.datetime.utcnow().isoformat(),cont) )
+print("[{0}] [ END ]" + datetime.datetime.utcnow().isoformat() )
