@@ -1,2 +1,2 @@
 # ProcessDataElastic
-Code to upload, down or process data in Elasticsearh
+Code to upload, download or process data in Elasticsearh
