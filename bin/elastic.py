@@ -7,14 +7,15 @@
 # sys.setdefaultencoding('utf-8') #reload(sys)
 ########### from flask import Flask, request, abort
 #########################################################################################
-import sys, requests, json, time
+import sys, requests, json
 from datetime import datetime, timedelta
+import time
 ########################################################################################
 from utils import *
 ########################################################################################
-URL = "https://1232343543345.us-east-1.aws.found.io:9243" #key/webhooks
+URL = "https://00000.us-east-1.aws.found.io:9243" #key/webhooks
 USER = "user"
-PASS = "password"
+PASS = "pass"
 #######################################################################################
 class elasticsearch():            
     def __init__(self, url=None, user=None , pas=None):
@@ -43,14 +44,14 @@ class elasticsearch():
     def get_url_elk(self):
         return self.url_elk
 
-    def req_get(self, URL_API,data=""):
+    def req_get(self, URL_API,data="",timeout=None):
         if (URL_API==None): URL_API = self.url_elk
         if (len(data)>0):
             headers = {'Content-Type': 'application/json'}
             data = json.dumps(data)
-            rpt = requests.get( url=URL_API , auth=(self.user,self.pas), headers=headers , data=data )
+            rpt = requests.get( url=URL_API , auth=(self.user,self.pas), headers=headers , data=data , timeout=timeout)
         else:
-            rpt = requests.get( url=URL_API , auth=(self.user,self.pas))
+            rpt = requests.get( url=URL_API , auth=(self.user,self.pas), timeout=timeout)
         
         if not( (rpt.status_code)==200 or (rpt.status_code)==201 ):
             print("[GET]: "+ str(rpt.status_code) +" | "+ str(rpt.reason))
@@ -91,8 +92,8 @@ class elasticsearch():
         
         return
 
-    def req_del(self, URL_API):
-        rpt = requests.delete( url=URL_API , auth=(self.user,self.pas))
+    def req_del(self, URL_API,timeout=None):
+        rpt = requests.delete( url=URL_API , auth=(self.user,self.pas), timeout=None)
         print("[DEL]:"+str(rpt.status_code)+" | "+ str(rpt.reason) )
         return
 
@@ -185,8 +186,6 @@ class elasticsearch():
 
     def set_data(self, INDEX, TYPE, ID, data):
         URL = self.url_elk + "/" + INDEX + "/" + TYPE + "/"+ ID
-        #json_data=json.loads(data)
-        #print_json(json_data)
         self.req_post(URL,data)
         return
 
@@ -210,12 +209,17 @@ class elasticsearch():
             self.delete_by_index(INDEX)
         return
 
-    def post_bulk(self,list_data,headers=None):
+    def post_bulk(self,list_data,header_json=None):
         data2sent = ""
         cont = 0
         start_time = time.time()
-        for lista in list_data : 
-            if(headers==None):
+        if(len(list_data)==0):
+            print("[WARN] list_data is NULL.")
+            #time.sleep(1)
+            return
+        
+        for lista in list_data :
+            if(header_json==None):
                 #--------------------------------------------------------------------------------
                 header_temp = {
                     "update":{
@@ -229,11 +233,12 @@ class elasticsearch():
                 body_temp = { "doc" :  lista["_source"] }
                 #--------------------------------------------------------------------------------
             else:
-                header_temp = headers
+                header_temp = header_json
                 body_temp = lista
             cont = cont + 1
             data2sent = data2sent +json.dumps(header_temp)+"\n"+json.dumps(body_temp) + "\n"
         URL = self.url_elk + "/_bulk"
+        #print(data2sent)
         self.req_post(URL , data2sent )
         elapsed_time = time.time() - start_time
         print("[POST_BULK] Elapsed time : %.10f seconds\n" % elapsed_time)
@@ -362,7 +367,6 @@ def test():
     rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state")
     print(rpt_json)
     
-
     """
     lista_json = loadCSVtoJSON("Todos_los_equipos_Peru.csv")
     ec.delete_by_index("repsol")
