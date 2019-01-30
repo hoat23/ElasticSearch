@@ -1,5 +1,5 @@
 #!/bin/bash
-@echo off
+echo $PATH
 cd
 pwd
 echo Downloading padron_reducido from SUNAT
