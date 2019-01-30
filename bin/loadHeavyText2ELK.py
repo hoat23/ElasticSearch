@@ -11,7 +11,7 @@ import re
 import time
 import datetime
 
-nameHeavyFile = 'padron_reducido_ruc.txt'
+nameHeavyFile = '/usr/share/logstash/padron_reducido_ruc.txt'
 char_sep = '|'
 
 block_size = 1E3
