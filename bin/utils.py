@@ -18,7 +18,7 @@ def print_json(json_obj):
 def print_list(lista):
     num = 0
     for item in lista:
-        print("\t{0:03d}. {1} ".format( num, item) )
+        print("   {0:03d}. {1} ".format( num, item) )
         num+=1
     return
 #######################################################################################
@@ -42,10 +42,14 @@ def count_elapsed_time(f,*args,**kwargs):
         return ret
     return wrapper
 #######################################################################################
-def list2json(list_field, list_value,remove_char=None):
+def list2json(list_field, list_value,remove_char=None,type_data=None):
     data_json = {}
     len_field = len(list_field)
     len_value = len(list_value)
+    if (type_data!=None and len_field!=len(type_data)):
+        print("[ERROR] list2json type_data disabled.")
+        type_data=None
+
     if (len_field>len_value):
         print("[ERROR] list2json len_field:{0} > len_value:{1}".format(len_field,len_value))
         print(str(list_field))
@@ -55,7 +59,15 @@ def list2json(list_field, list_value,remove_char=None):
             if (len(list_field[i])>0):
                 if(remove_char!=None):
                     list_value[i]=list_value[i].replace(remove_char,"")
-                data_json.update({list_field[i] : list_value[i]})
+                if(type_data==None):
+                    data_json.update({list_field[i] : list_value[i]})
+                else:
+                    if(type_data[i]=='int'):
+                        data_json.update({list_field[i] : int(list_value[i])})
+                    elif(type_data[i]=='float'):
+                        data_json.update({list_field[i] : float(list_value[i])})
+                    else:
+                        data_json.update({list_field[i] : list_value[i]})
                 
                 if not(len(list_value[i])>0):
                     print("[WARN] field value lost [{0}:{1}]".format(list_field[i],list_value[i]))
