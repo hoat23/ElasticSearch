@@ -24,10 +24,10 @@ def beep_alert(f = 2500, t = 1000, count = 1):
 def loadHeavyText2ELK(nameHeavyFile = 'padron_reducido_ruc.txt',char_sep = '|',block_size = 1E4,send_elk=False):
     cont = 0
     input_file = open(nameHeavyFile,'rb')
-    print("[{0}] [START]".format(datetime.datetime.utcnow().isoformat() ) )
+    print("[{0} | START ]".format(datetime.datetime.utcnow().isoformat() ) )
     block_data=[]
     elk = elasticsearch()
-    sum_chars = 0
+    sum_chars = critical_err = 0
     while(1):
         cont = cont + 1 
         try:
@@ -43,11 +43,13 @@ def loadHeavyText2ELK(nameHeavyFile = 'padron_reducido_ruc.txt',char_sep = '|',b
             else:
                 data_json = {}
                 body_fields = line.split(char_sep)
+                data_json = list2json(header_fields, body_fields)    
                 if(len(data_json)==0 or len(body_fields)==0):
-                    print("[{0}] [ERROR | num line : {1} | num byte : {2}]".format(datetime.datetime.utcnow().isoformat(), cont, sum_chars) )
+                    print("[{0} | ERROR | num line : {1: 10d} | num byte : {2: 10d}]".format(datetime.datetime.utcnow().isoformat(), cont, sum_chars) )
                     beep_alert()
+                    if(len(body_fields)==0):
+                        critical_err = critical_err + 1
                 else:
-                    data_json = list2json(header_fields, body_fields)
                     data_json.update({'rename_index':'sunat',"source_id":cont})
                     #print_json(data_json)
                     #send_json(data_json,IP="54.208.72.130 ",PORT=5959)
@@ -57,13 +59,17 @@ def loadHeavyText2ELK(nameHeavyFile = 'padron_reducido_ruc.txt',char_sep = '|',b
                 if(send_elk):
                     elk.post_bulk(block_data,header_json={"index":{"_index":"sunat","_type":"_doc"}})
                 else:
-                    print("[{0} | num line : {1}]".format(datetime.datetime.utcnow().isoformat(), cont) )
+                    print("[{0} | INFO  | num line : {1: 10d}]".format(datetime.datetime.utcnow().isoformat(), cont) )
                 block_data=[]
                 time.sleep(1)
         except:
-            print("[{0}] [ERROR | {1} ]".format(datetime.datetime.utcnow().isoformat(), cont) )
+            print("[{0} | ERROR | {1} ]".format(datetime.datetime.utcnow().isoformat(), cont) )
             break
-    print("[{0}] [ END ]".format(datetime.datetime.utcnow().isoformat()))
+        finally:
+            if(critical_err>5):
+                print("[{0} | CRIT  | {1} ]".format(datetime.datetime.utcnow().isoformat(), critical_err) )
+                break
+    print("[{0} | END   ]".format(datetime.datetime.utcnow().isoformat()))
 #########################################################################################
 if __name__ == "__main__":
     loadHeavyText2ELK()
