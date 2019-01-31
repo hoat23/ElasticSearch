@@ -80,10 +80,14 @@ def loadHeavyText2ELK(nameHeavyFile, char_sep = '|',block_size = 1E4,send_elk=Fa
                 #time.sleep(1)
         except:
             print("[{0} | ERROR | {1} ]".format(datetime.datetime.utcnow().isoformat(), cont) )
+            print(" ->  | {0}".format(header_line))
+            print(" ->  | {0}".format(org_line))
+            print(" ->  | {0}".format(line))
             beep_alert(t=500,count=3)
-            break
+            critical_err = critical_err + 1
+            #break
         finally:
-            if(critical_err>5):
+            if(critical_err>20):
                 print("[{0} | CRIT  | {1} ]".format(datetime.datetime.utcnow().isoformat(), critical_err) )
                 beep_alert(t=500,count=3)
                 break
