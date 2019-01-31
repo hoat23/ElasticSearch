@@ -32,8 +32,8 @@ def loadHeavyText2ELK(nameHeavyFile = 'padron_reducido_ruc.txt',char_sep = '|',b
         cont = cont + 1 
         try:
             line = input_file.readline()
-            sum_chars =  sum_chars + len(line)
             line = line.decode('utf-8',errors='replace')
+            sum_chars =  sum_chars + len(line)
             line = line.replace("\n","")
             line = line.replace("\r","")
             re.sub('[^a-zA-Z0-9-_*.]', '', line) #https://platzi.com/blog/expresiones-regulares-python/
