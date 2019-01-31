@@ -73,10 +73,9 @@ def loadHeavyText2ELK(nameHeavyFile, char_sep = '|',block_size = 1E4,send_elk=Fa
                     print("[{0} | CRIT  | num line : {1: 10d} | num byte : {2: 10d}]".format(datetime.datetime.utcnow().isoformat(), critical_err) )
                 
             if(cont%block_size==0):
+                print("[{0} | INFO  | num line : {1: 10d}]".format(datetime.datetime.utcnow().isoformat(), cont) )
                 if(send_elk):
                     elk.post_bulk(block_data,header_json={"index":{"_index":"sunat","_type":"_doc"}})
-                else:
-                    print("[{0} | INFO  | num line : {1: 10d}]".format(datetime.datetime.utcnow().isoformat(), cont) )
                 block_data=[]
                 #time.sleep(1)
         except:
@@ -95,5 +94,4 @@ if __name__ == "__main__":
         full_path='padron_reducido_ruc.txt'
     else:
         full_path='/usr/share/logstash/padron_reducido_ruc.txt'
-    
-    loadHeavyText2ELK('padron_reducido_ruc.txt', send_elk=False)
+    loadHeavyText2ELK(full_path, send_elk=False)
