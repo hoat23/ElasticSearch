@@ -15,7 +15,7 @@ import platform as p
 if (p.system()=='Windows'):# ONLY WINDOWS
     import winsound 
 #########################################################################################
-def beep_alert(f = 2500, t = 1000, count = 3):
+def beep_alert(f = 2500, t = 1000, count = 1):
     if (p.system()=='Windows'):# ONLY WINDOWS
         for i in range(0,count):
             winsound.Beep(f,t)
@@ -43,11 +43,11 @@ def loadHeavyText2ELK(nameHeavyFile = 'padron_reducido_ruc.txt',char_sep = '|',b
             else:
                 data_json = {}
                 body_fields = line.split(char_sep)
-                data_json = list2json(header_fields, body_fields)
-                if(len(data_json)==0):
+                if(len(data_json)==0 or len(body_fields)==0):
                     print("[{0}] [ERROR | num line : {1} | num byte : {2}]".format(datetime.datetime.utcnow().isoformat(), cont, sum_chars) )
                     beep_alert()
                 else:
+                    data_json = list2json(header_fields, body_fields)
                     data_json.update({'rename_index':'sunat',"source_id":cont})
                     #print_json(data_json)
                     #send_json(data_json,IP="54.208.72.130 ",PORT=5959)

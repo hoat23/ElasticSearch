@@ -50,15 +50,22 @@ def list2json(list_field, list_value,remove_char=None,type_data=None):
         print("[ERROR] list2json type_data disabled.")
         type_data=None
 
-    if (len_field>len_value):
+    if ( len_field > len_value):
         print("[ERROR] list2json len_field:{0} > len_value:{1}".format(len_field,len_value))
         print(str(list_field))
         print(str(list_value))
+    elif( len_field < len_value ):
+        print("[WARN] list2json len_field:{0} < len_value:{1}  ".format(len_field,len_value))
+        for i in range(0,len_field):
+            print(" ->  {0:02d} |[{1}:{2}]".format(i, list_field[i], list_value[i]))
+        for i in range(len_field,len_value):
+            print(" ->  {0:02d} |[{1}]".format(i, list_value[i]))
     else:
         for i in range(0,len_field):
             if (len(list_field[i])>0):
                 if(remove_char!=None):
                     list_value[i]=list_value[i].replace(remove_char,"")
+                
                 if(type_data==None):
                     data_json.update({list_field[i] : list_value[i]})
                 else:
@@ -70,7 +77,7 @@ def list2json(list_field, list_value,remove_char=None,type_data=None):
                         data_json.update({list_field[i] : list_value[i]})
                 
                 if not(len(list_value[i])>0):
-                    print("[WARN] field value lost [{0}:{1}]".format(list_field[i],list_value[i]))
+                    print("[WARN] field lost [{0}:{1}]".format(list_field[i],list_value[i]))
     return data_json
 #######################################################################################
 def loadCSVtoJSON(path):
