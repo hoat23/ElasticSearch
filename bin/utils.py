@@ -42,7 +42,7 @@ def count_elapsed_time(f,*args,**kwargs):
         return ret
     return wrapper
 #######################################################################################
-def list2json(list_field, list_value,remove_char=None,type_data=None,return_err=True):
+def list2json(list_field, list_value,remove_char=None,type_data=None,return_err=False):
     data_json = {}
     len_field = len(list_field)
     len_value = len(list_value)
@@ -55,16 +55,16 @@ def list2json(list_field, list_value,remove_char=None,type_data=None,return_err=
     if ( len_field > len_value):
         print("[ERROR] list2json len_field:{0} > len_value:{1}".format(len_field,len_value))
         for i in range(0,len_value):
-            print(" ->  {0:02d} |[{1}:{2}]".format(i, list_field[i], list_value[i]))
+            print(" ->  {0:02d} |[{1}:{2}]".format(i, str(list_field[i]), str(list_value[i])))
         for i in range(len_value,len_field):
-            print(" ->  {0:02d} |[{1}:NULL]".format(i, list_field[i]))
+            print(" ->  {0:02d} |[{1}:NULL]".format(i, str(list_field[i])))
         flag_err=-1
     elif( len_field < len_value ):
         print("[WARN] list2json len_field:{0} < len_value:{1}  ".format(len_field,len_value))
         for i in range(0,len_field):
-            print(" ->  {0:02d} |[{1}:{2}]".format(i, list_field[i], list_value[i]))
+            print(" ->  {0:02d} |[{1}:{2}]".format(i, str(list_field[i]), str(list_value[i]) ))
         for i in range(len_field,len_value):
-            print(" ->  {0:02d} |[{1}]".format(i, list_value[i]))
+            print(" ->  {0:02d} |[{1}]".format(i, str(list_value[i]) ))
         flag_err=1
     
     for i in range(0,len_field):
