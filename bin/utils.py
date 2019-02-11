@@ -7,9 +7,10 @@
 #########################################################################################
 import sys, requests, json, csv
 from datetime import datetime, timedelta
-from flask import Flask, request, abort
+#from flask import Flask, request, abort
 import time, os, socket
 from subprocess import Popen, PIPE
+import functools, yaml
 ########################################################################################
 def print_json(json_obj):
     print(json.dumps(json_obj, indent=2, sort_keys=True))
@@ -41,6 +42,20 @@ def count_elapsed_time(f,*args,**kwargs):
         print("[count_elapsed_time] "+f.__name__+"Elapsed time: %0.10f seconds." % elapsed_time)
         return ret
     return wrapper
+#######################################################################################
+def string2hex(s,char_sep=":"): #convert string to hex
+    lst = []
+    for ch in s:
+        num_ascci = ord(ch)
+        hv = hex(num_ascci).replace('0x', '')
+        if len(hv) == 1:
+            hv = '0'+hv
+        lst.append(hv)
+    if(len(lst)>0):
+        return functools.reduce(lambda x,y:x+char_sep+y, lst)
+    else:
+        #print("[ERROR] string2hex [{0}]".format(s))
+        return ""
 #######################################################################################
 def list2json(list_field, list_value,remove_char=None,type_data=None,return_err=False):
     data_json = {}
@@ -156,4 +171,9 @@ def send_json(msg, IP="0.0.0.0", PORT = 2233):
     finally:
         sock.close()
         return
+#######################################################################################
+def save_yml(data_json, nameFile="data.yml"):
+    with open(nameFile, "w") as yaml_file:
+        yaml.dump(data_json, yaml_file, default_flow_style=False)
+    return
 #######################################################################################
