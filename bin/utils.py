@@ -6,8 +6,7 @@
 # sys.setdefaultencoding('utf-8') #reload(sys)
 #########################################################################################
 import sys, requests, json, csv
-from datetime import datetime, timedelta
-from flask import Flask, request, abort
+#from flask import Flask, request, abort
 import time, os, socket
 from subprocess import Popen, PIPE
 import functools, yaml
@@ -42,6 +41,20 @@ def count_elapsed_time(f,*args,**kwargs):
         print("[count_elapsed_time] "+f.__name__+"Elapsed time: %0.10f seconds." % elapsed_time)
         return ret
     return wrapper
+#######################################################################################
+def string2hex(s,char_sep=":"): #convert string to hex
+    lst = []
+    for ch in s:
+        num_ascci = ord(ch)
+        hv = hex(num_ascci).replace('0x', '')
+        if len(hv) == 1:
+            hv = '0'+hv
+        lst.append(hv)
+    if(len(lst)>0):
+        return functools.reduce(lambda x,y:x+char_sep+y, lst)
+    else:
+        #print("[ERROR] string2hex [{0}]".format(s))
+        return ""
 #######################################################################################
 def list2json(list_field, list_value,remove_char=None,type_data=None,return_err=False):
     data_json = {}
@@ -102,6 +115,15 @@ def loadCSVtoJSON(path):
     
     print("["+str(path)+"] -> Datos cargados:" + str(len(list_data)))
     return list_data
+###############################################################################
+def loadYMLtoJSON(path):
+    data_loaded = None
+    with open(path,'r') as stream:
+        try:
+            data_loaded = yaml.load(stream)
+        except:
+            print("[ERROR] loadYMLtoJSON")
+    return data_loaded
 #######################################################################################
 def isAliveIP(host, count=1, timeout=1000):
     if sys.platform == 'win32':
@@ -131,7 +153,45 @@ def isAliveIP(host, count=1, timeout=1000):
         return False    
     #return (time, p.returncode)
 ###############################################################################
-def send_json(msg, IP="0.0.0.0", PORT = 2233):
+def renameKeys(old_dict,dict_oldkey_newkey,cont=5):
+    new_dict = {}
+    for key,value in zip(old_dict.keys(), old_dict.values()):
+        #Analizando "value"
+        if type(value)==dict:
+            cont = cont + 1
+            new_value = renameKeys(value,dict_oldkey_newkey,cont)
+        else:
+            new_value = value
+        #Analizando "key"
+        if key in dict_oldkey_newkey:
+            new_key = dict_oldkey_newkey[key]
+        else:
+            new_key = key
+        new_dict[new_key] = new_value
+    return new_dict
+###############################################################################
+def convert_data(data_to_convert,strc_dict):
+    data_converted = {}
+    # path_of_multi_dict: Especifica la ruta con los multiples diccionarios a cargar
+    if 'path_of_multi_dict' in strc_dict:
+        path_of_multi_dict = strc_dict['path_of_multi_dict']
+        dict_to_load = strc_dict['dict_to_load']
+        print("dict "+dict_to_load)
+        dict_yml = loadYMLtoJSON(path_of_multi_dict)
+        dictionary = dict_yml[dict_to_load]
+        data_converted=renameKeys(data_to_convert, dictionary)
+    # strc_dict   : Es un diccionario que contiene multiples diccionarios
+    # dict_to_load: Especifica que diccionario se va a utilzar para convertir la data
+    elif 'dict_to_load' in strc_dict:
+        dict_to_load = strc_dict['dict_to_load']
+        dictionary = strc_dict['multi_dict'][dict_to_load]
+        data_converted=renameKeys(data_to_convert, dictionary)
+    else:
+        print("[ERROR] convert_data {0}".format(str(strc_dict)))
+    #print_json(data_converted)
+    return data_converted
+###############################################################################
+def send_json(msg, IP="0.0.0.0", PORT = 2233, dictionary={}, emulate=False):
     """
         #Configuracion en /etc/logstash/conf.d/logstash-syslog.conf
         input{
@@ -140,24 +200,32 @@ def send_json(msg, IP="0.0.0.0", PORT = 2233):
                 codec => json
             }
         }
+
+        Si se desea convertir algunos campos antes de ser enviados
+        se pasa la variable dictionary
     """
     if(type(PORT)==str):
         PORT = int(PORT)
-    
     try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect( (IP,PORT) )
-        #print("sending message: "+str(msg))
-        print("sending message . . . ")
-        print_json(msg)
-        datajs = json.dumps(msg)
-        sock.sendall( datajs.encode() )
+        if(len(dictionary)>0):
+            msg = convert_data(msg,dictionary)
+        #Printing message
+        #print( "Sending message... emulate = {0}".format(emulate) )
+        if not (emulate): #If emulate=True don't send data to logstash
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect( (IP,PORT) )    
+            datajs = json.dumps(msg)
+            sock.sendall( datajs.encode() )
+            #print_json(msg)
     except:
-        #print("Error inesperado: "+sys.exc_info()[0])
+        print("Error inesperado: "+sys.exc_info()[0])
         #sys.exit(1)
         return
     finally:
-        sock.close()
+        try:
+            sock.close()
+        except:
+            pass
         return
 #######################################################################################
 def save_yml(data_json, nameFile="data.yml"):
@@ -165,4 +233,3 @@ def save_yml(data_json, nameFile="data.yml"):
         yaml.dump(data_json, yaml_file, default_flow_style=False)
     return
 #######################################################################################
-
