@@ -105,12 +105,13 @@ def list2json(list_field, list_value,remove_char=None,type_data=None,return_err=
     else:
         return data_json
 #######################################################################################
-def loadCSVtoJSON(path):
-    csvfile = open(path)
+def loadCSVtoJSON(path,encoding="utf-8"):
+    csvfile = open(path,encoding=encoding)
     data = csv.DictReader(csvfile)
     list_data = []
-    
+    row = dict()
     for row in data:
+        #print("loadCVStoJSON -> "+str(type(row)))
         list_data.append(row)
     
     print("["+str(path)+"] -> Datos cargados:" + str(len(list_data)))
@@ -153,8 +154,26 @@ def isAliveIP(host, count=1, timeout=1000):
         return False    
     #return (time, p.returncode)
 ###############################################################################
-def renameKeys(old_dict,dict_oldkey_newkey,cont=5):
+def renameValues(old_dict,old_value,value_to_set,cont=0):
     new_dict = {}
+    if(cont==5):
+        return
+    for key,value in zip(old_dict.keys(),old_dict.values()):
+        #print("->{2} {0}:{1}".format(key,value,type(value)))
+        if type(value)==dict:
+            cont=cont+1
+            new_value =renameValues(value,old_value,value_to_set, cont)
+        elif(value==old_value):
+            new_value = value_to_set
+        else:
+            new_value = value
+        new_dict.update( {key : new_value} )
+    return new_dict
+###############################################################################
+def renameKeys(old_dict,dict_oldkey_newkey,cont=0):
+    new_dict = {}
+    if(cont==5):
+        return
     for key,value in zip(old_dict.keys(), old_dict.values()):
         #Analizando "value"
         if type(value)==dict:
@@ -233,3 +252,11 @@ def save_yml(data_json, nameFile="data.yml"):
         yaml.dump(data_json, yaml_file, default_flow_style=False)
     return
 #######################################################################################
+def save_json(data_json, nameFile="data.json"):
+    with open(nameFile, 'w') as json_file:
+        for release in data_json.values():
+            json_file.write(release)
+            json_file.write("\n")
+    return
+#######################################################################################
+
