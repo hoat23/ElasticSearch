@@ -9,17 +9,22 @@ import sys, requests, json, csv
 #from flask import Flask, request, abort
 import time, os, socket
 from subprocess import Popen, PIPE
-import functools, yaml
-########################################################################################
-def print_json(json_obj):
-    print(json.dumps(json_obj, indent=2, sort_keys=True))
-    return
+from collections import OrderedDict
+import functools, yaml #pip install pyyaml
 #######################################################################################
 def print_list(lista):
     num = 0
     for item in lista:
         print("   {0:03d}. {1} ".format( num, item) )
         num+=1
+    return
+########################################################################################
+def print_json(json_obj):
+    try:
+        print(json.dumps(json_obj, indent=2, sort_keys=True))
+    except:
+        print("[ERROR] print_json -> error type={0}".format(type(json_obj)))
+    
     return
 #######################################################################################
 def fileTXT_save(text, nameFile = "fileTXT_save.txt", coding='utf-8'):
@@ -107,12 +112,14 @@ def list2json(list_field, list_value,remove_char=None,type_data=None,return_err=
 #######################################################################################
 def loadCSVtoJSON(path,encoding="utf-8"):
     csvfile = open(path,encoding=encoding)
-    data = csv.DictReader(csvfile)
+    data = csv.DictReader(csvfile)#,delimiter =";",quotechar=";")
     list_data = []
     row = dict()
     for row in data:
         #print("loadCVStoJSON -> "+str(type(row)))
-        list_data.append(row)
+        #print(row)
+        #list_data.append( dict( OrderedDict(row) ) ) 
+        list_data.append( row )
     
     print("["+str(path)+"] -> Datos cargados:" + str(len(list_data)))
     return list_data
@@ -189,13 +196,29 @@ def renameKeys(old_dict,dict_oldkey_newkey,cont=0):
         new_dict[new_key] = new_value
     return new_dict
 ###############################################################################
+def build_table_json(list_name_keys, list_data_json):
+    #La unica condicion es que los datos tengas la misma cantidad de llaves
+    # list_name_keys = ['key1','key2',...]
+    # list_data_json = [{'aux1': 'val1', 'aux2':'VAL1',...},{'aux1':'val2','aux2':'VAL2',...},]
+    # return [{'key1':'val1','key2':'VAL1',...},{'key1': 'val2','key2': 'VAL2',...}, ...]
+    list_keys = list(list_data_json[0])
+    table_json = []
+    for key in list_keys:
+        rpt_json = {}
+        cont = 0
+        for data_json in list_data_json:
+            rpt_json.update( {list_name_keys[cont] : data_json[key]} )
+            table_json.append(rpt_json)
+            cont += 1
+    return table_json
+###############################################################################
 def convert_data(data_to_convert,strc_dict):
     data_converted = {}
     # path_of_multi_dict: Especifica la ruta con los multiples diccionarios a cargar
     if 'path_of_multi_dict' in strc_dict:
         path_of_multi_dict = strc_dict['path_of_multi_dict']
         dict_to_load = strc_dict['dict_to_load']
-        print("dict "+dict_to_load)
+        #print("dict "+dict_to_load)
         dict_yml = loadYMLtoJSON(path_of_multi_dict)
         dictionary = dict_yml[dict_to_load]
         data_converted=renameKeys(data_to_convert, dictionary)
@@ -231,11 +254,13 @@ def send_json(msg, IP="0.0.0.0", PORT = 2233, dictionary={}, emulate=False):
         #Printing message
         #print( "Sending message... emulate = {0}".format(emulate) )
         if not (emulate): #If emulate=True don't send data to logstash
+            """
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect( (IP,PORT) )    
             datajs = json.dumps(msg)
             sock.sendall( datajs.encode() )
-            #print_json(msg)
+            """#H23
+            print_json(msg)
     except:
         print("Error inesperado: "+sys.exc_info()[0])
         #sys.exit(1)
