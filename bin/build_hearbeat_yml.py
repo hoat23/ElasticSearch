@@ -21,6 +21,8 @@ class reconfigurate_hearbeat():
         print("START| {0} reconfigurate_heartbeat | SO {1}".format(datetime.utcnow().isoformat(),self.s_o))
         self.service_bin = "/etc/init.d/heartbeat-elastic"
         self.fullpath_bin = "/usr/share/heartbeat/bin/heartbeat"
+        self.fullpath_log = "/var/log/heartbeat"
+        
         if(self.s_o=='Windows'):
             self.fullpath_yml = "heartbeat.yml"
         else:
@@ -128,18 +130,24 @@ class reconfigurate_hearbeat():
         print("INFO | {0} reconfigurate_heartbeat | Created <heartbeat.yml>".format(datetime.utcnow().isoformat()))
         return 
     
-    def relaunch_service(self):
-        print("INFO | {0} reconfigurate_heartbeat | Restarting service heartbeat.".format(datetime.utcnow().isoformat()))
+    def relaunch_service(self,mode="production"):
         os.system("cd")
-        os.system("{0} restart".format(self.service_bin))
+        if(mode=="debug"):
+            print("INFO | {0} reconfigurate_heartbeat | Starting heartbeat mode debug.".format(datetime.utcnow().isoformat()))
+            os.system("{0} stop".format(self.service_bin))
+            os.system("{0} -c {1} -e".format(self.fullpath_bin, self.fullpath_yml))
+        else:#mode="production"
+            print("INFO | {0} reconfigurate_heartbeat | Restarting service heartbeat.".format(datetime.utcnow().isoformat()))
+            os.system("{0} restart".format(self.service_bin))
+        
 
     def run_mode_debug(self):
-        print("INFO | {0} reconfigurate_heartbeat | Starting heartbeat mode debug.".format(datetime.utcnow().isoformat()))
+        
         os.system("cd")
-        os.system("{0} -c {1} -e -d *".format(self.fullpath_bin, self.fullpath_yml))
+        
 if __name__ == "__main__":
     hearbeat = reconfigurate_hearbeat()
     hearbeat.download_configuracion('supra')
     hearbeat.build_yml()
-    hearbeat.relaunch_service()
+    hearbeat.relaunch_service(mode="production")
 
