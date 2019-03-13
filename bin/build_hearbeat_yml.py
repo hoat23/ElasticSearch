@@ -22,7 +22,7 @@ class reconfigurate_hearbeat():
         self.service_bin = "/etc/init.d/heartbeat-elastic"
         self.fullpath_bin = "/usr/share/heartbeat/bin/heartbeat"
         self.fullpath_log = "/var/log/heartbeat"
-        
+
         if(self.s_o=='Windows'):
             self.fullpath_yml = "heartbeat.yml"
         else:
@@ -132,9 +132,10 @@ class reconfigurate_hearbeat():
     
     def relaunch_service(self,mode="production"):
         os.system("cd")
+        os.system("{0} stop".format(self.service_bin))
+        time.sleep(2)
         if(mode=="debug"):
             print("INFO | {0} reconfigurate_heartbeat | Starting heartbeat mode debug.".format(datetime.utcnow().isoformat()))
-            os.system("{0} stop".format(self.service_bin))
             os.system("{0} -c {1} -e".format(self.fullpath_bin, self.fullpath_yml))
         else:#mode="production"
             print("INFO | {0} reconfigurate_heartbeat | Restarting service heartbeat.".format(datetime.utcnow().isoformat()))
