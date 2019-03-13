@@ -19,6 +19,11 @@ class reconfigurate_hearbeat():
         # Windows, linux, win32
         self.s_o = platform.system()
         print("START| {0} reconfigurate_heartbeat | SO {1}".format(datetime.utcnow().isoformat(),self.s_o))
+        self.fullpath_bin = "/etc/init.d/heartbeat-elastic"
+        if(self.s_o=='Windows'):
+            self.fullpath_yml = "heartbeat.yml"
+        else:
+            self.fullpath_yml = "/etc/heartbeat/heartbeat.yml"
         self.query = {}
         self.elk = elasticsearch()
         return
@@ -117,16 +122,15 @@ class reconfigurate_hearbeat():
         heartbeat_json.update( {"heartbeat.monitors": list_of_ips})
         #print_json(heartbeat_json)
         #-------------------------------------------------------------------------------------------------"
-        save_yml(heartbeat_json, nameFile="heartbeat.yml")
+        os.system("cd")
+        save_yml(heartbeat_json, nameFile=self.fullpath_yml)
         print("INFO | {0} reconfigurate_heartbeat | Created <heartbeat.yml>".format(datetime.utcnow().isoformat()))
         return 
     
     def relaunch_service(self):
-        fullpath_bin = "/etc/init.d/heartbeat-elastic"
-        fullpath_yml = "/etc/heartbeat/heartbeat.yml"
         print("INFO | {0} reconfigurate_heartbeat | Restarting service heartbeat.".format(datetime.utcnow().isoformat()))
         os.system("cd")
-        os.system("{0} restart".format(fullpath_bin))
+        os.system("{0} restart".format(self.fullpath_bin))
 
 if __name__ == "__main__":
     hearbeat = reconfigurate_hearbeat()
