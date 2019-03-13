@@ -19,7 +19,8 @@ class reconfigurate_hearbeat():
         # Windows, linux, win32
         self.s_o = platform.system()
         print("START| {0} reconfigurate_heartbeat | SO {1}".format(datetime.utcnow().isoformat(),self.s_o))
-        self.fullpath_bin = "/etc/init.d/heartbeat-elastic"
+        self.service_bin = "/etc/init.d/heartbeat-elastic"
+        self.fullpath_bin = "/usr/share/heartbeat/bin/heartbeat"
         if(self.s_o=='Windows'):
             self.fullpath_yml = "heartbeat.yml"
         else:
@@ -130,8 +131,12 @@ class reconfigurate_hearbeat():
     def relaunch_service(self):
         print("INFO | {0} reconfigurate_heartbeat | Restarting service heartbeat.".format(datetime.utcnow().isoformat()))
         os.system("cd")
-        os.system("{0} restart".format(self.fullpath_bin))
+        os.system("{0} restart".format(self.service_bin))
 
+    def run_mode_debug(self):
+        print("INFO | {0} reconfigurate_heartbeat | Starting heartbeat mode debug.".format(datetime.utcnow().isoformat()))
+        os.system("cd")
+        os.system("{0} -c {1} -e -d *".format(self.fullpath_bin, self.fullpath_yml))
 if __name__ == "__main__":
     hearbeat = reconfigurate_hearbeat()
     hearbeat.download_configuracion('supra')
