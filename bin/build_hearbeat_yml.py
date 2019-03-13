@@ -99,7 +99,7 @@ class reconfigurate_hearbeat():
         heartbeat_json = {
             "output.logstash": {
                 "hosts": [
-                    "{0}:{1}".format(logstash_configuration['ip'], logstash_configuration['port']['heartbeat'])
+                    "{0}:{1}".format(logstash_configuration['ip_output_heartbeat'], logstash_configuration['port']['heartbeat'])
                 ]
             },
             "setup.template.settings": {
