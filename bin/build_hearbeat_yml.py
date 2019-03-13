@@ -114,7 +114,7 @@ class reconfigurate_hearbeat():
             client_to_monitoring_json = {
                 "type": "icmp",
                 "timeout": "3s",
-                "schedule": "@every 12s"
+                "schedule": "@every 30s"
             }
             client_to_monitoring_json.update( { "name": client } )
             list_hosts = []
