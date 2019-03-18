@@ -214,24 +214,30 @@ def build_table_json(list_name_keys, list_data_json):
 ###############################################################################
 def convert_data(data_to_convert,strc_dict):
     data_converted = {}
-    # path_of_multi_dict: Especifica la ruta con los multiples diccionarios a cargar
-    if 'path_of_multi_dict' in strc_dict:
-        path_of_multi_dict = strc_dict['path_of_multi_dict']
-        dict_to_load = strc_dict['dict_to_load']
-        #print("dict "+dict_to_load)
-        dict_yml = loadYMLtoJSON(path_of_multi_dict)
-        dictionary = dict_yml[dict_to_load]
-        data_converted=renameKeys(data_to_convert, dictionary)
-    # strc_dict   : Es un diccionario que contiene multiples diccionarios
-    # dict_to_load: Especifica que diccionario se va a utilzar para convertir la data
-    elif 'dict_to_load' in strc_dict:
-        dict_to_load = strc_dict['dict_to_load']
-        dictionary = strc_dict['multi_dict'][dict_to_load]
-        data_converted=renameKeys(data_to_convert, dictionary)
-    else:
-        print("[ERROR] convert_data {0}".format(str(strc_dict)))
-    #print_json(data_converted)
+    try:
+        # path_of_multi_dict: Especifica la ruta con los multiples diccionarios a cargar
+        if 'path_of_multi_dict' in strc_dict:
+            path_of_multi_dict = strc_dict['path_of_multi_dict']
+            dict_to_load = strc_dict['dict_to_load']
+            #print("dict "+dict_to_load)
+            dict_yml = loadYMLtoJSON(path_of_multi_dict)
+            dictionary = dict_yml[dict_to_load]
+            data_converted=renameKeys(data_to_convert, dictionary)
+        # strc_dict   : Es un diccionario que contiene multiples diccionarios
+        # dict_to_load: Especifica que diccionario se va a utilzar para convertir la data
+        elif 'dict_to_load' in strc_dict:
+            dict_to_load = strc_dict['dict_to_load']
+            dictionary = strc_dict['multi_dict'][dict_to_load]
+            data_converted=renameKeys(data_to_convert, dictionary)
+        else:
+            print("[ERROR] convert_data {0}".format(str(strc_dict)))
+            data_converted = data_to_convert
+        #print_json(data_converted)
+    except:
+        print("[ERROR] returned data without convert.")
+        data_converted = data_to_convert
     return data_converted
+    
 ###############################################################################
 def send_json(msg, IP="0.0.0.0", PORT = 2233, dictionary={}, emulate=False):
     """
