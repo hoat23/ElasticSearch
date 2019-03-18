@@ -254,13 +254,11 @@ def send_json(msg, IP="0.0.0.0", PORT = 2233, dictionary={}, emulate=False):
         #Printing message
         #print( "Sending message... emulate = {0}".format(emulate) )
         if not (emulate): #If emulate=True don't send data to logstash
-            """
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect( (IP,PORT) )    
             datajs = json.dumps(msg)
             sock.sendall( datajs.encode() )
-            """#H23
-            print_json(msg)
+            #print_json(msg)
     except:
         print("Error inesperado: "+sys.exc_info()[0])
         #sys.exit(1)
@@ -284,4 +282,3 @@ def save_json(data_json, nameFile="data.json"):
             json_file.write("\n")
     return
 #######################################################################################
-
