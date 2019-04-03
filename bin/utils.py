@@ -19,7 +19,7 @@ def print_list(lista):
         num+=1
     return
 ########################################################################################
-def print_json(json_obj):
+def print_json(json_obj,codification='utf-8'):
     try:
         print(json.dumps(json_obj, indent=2, sort_keys=True))
     except:
@@ -60,6 +60,116 @@ def string2hex(s,char_sep=":"): #convert string to hex
     else:
         #print("[ERROR] string2hex [{0}]".format(s))
         return ""
+#######################################################################################
+"""
+    #Ejemplo de uso
+    data_json1 = {
+        "A1": 1,
+        "A2": {
+            "A2_1": 2,
+            "A2_2": {
+                "A2_2_1": 4,
+                "A2_3_4": 5
+            },
+            "A3": [
+                {
+                    "A3_1": 31,
+                    "A3_2": {
+                        "A3_2_1": 321,
+                        "A3_2_2": 322,
+                        "A3_2_3": [
+                            {
+                            "A3_2_3_1": 3231.1,
+                            "B1": {
+                                    "B1_1": 1.1
+                                }
+                            }
+                            ,
+                            {
+                            "A3_2_3_1": 3231.2
+                            }
+                        ]
+                    }
+                },
+                {
+                    "A3_1": 32,
+                    "A3_2": {
+                        "A3_2_3": [
+                            {
+                            "A3_2_3_1": 3231.3,
+                            "B1": {
+                                    "B1_1": 1.1
+                                }
+                            },
+                            {
+                            "A3_2_3_1": 3231.4
+                            }
+                        ]
+                    }
+                },
+                {
+                    "A3_1": 33
+                }
+            ]
+        }
+    }
+    path_element1 = "A2.[A3].A3_2.[A3_2_3].B1.B1_1"
+    rpt_json = getelementfromjson(data_json1,path_element1)
+    print_list(rpt_json)
+"""
+def getelementfromjson(data_json,path_to_element):
+    # Accede a un elemento anidado en un json, con un camino especificado de la forma
+    # path_to_element = "payload.aggregations.[clientes].[sedes][ip_s]"
+    list_keys = []
+    list_path_element = path_to_element.split(".")
+    walker = data_json
+    #print("PATH       :        "+ path_to_element)
+    for element in list_path_element:
+        current_path = path_to_element[ path_to_element.find(element)+len(element)+ 1: ]
+        #print("<{0}>".format(element))
+        if element.find("[")==0 and element.find("]")>0 :#si tiene corchetes, significa q es un array
+            #print("->    <{0}> {1}".format(element,current_path))
+            list_temp = []
+            only_element = element[1:len(element)-1]
+            if (only_element in walker):
+                array_walker = walker[only_element]
+                if len(current_path)==0: #Caso: agregar todo el array
+                    list_keys.append(array_walker)
+                    break
+                # Caso: recorrer el array
+                #print("[INI] {0} | {1} | values from array".format(element,current_path))
+                for element_in_array in array_walker:
+                    rpt_json = getelementfromjson(element_in_array,current_path)
+                    #print_json(rpt_json)
+                    if (type(rpt_json)==list):
+                        for val_in_list in rpt_json:
+                            list_keys.append(val_in_list)
+                    elif len(rpt_json)>0:
+                        list_keys.append(rpt_json)
+                #print("[END] {0} | {1} | values from array".format(element,current_path))
+                return list_keys
+            else:
+                #print("[ERROR] getelementfromjson|{1}| key:{0} don't found in json.".format(only_element,path_to_element))
+                pass
+        else:#sino, entonces es un elemento simple ha acceder en el json
+            #print("->    <{0}> {1}".format(element,current_path))
+            if (element in walker):
+                #Si es el fin del path, entonces solo queda agregar el elemento
+                if(len(current_path)==0):
+                    walker = walker[element]
+                    list_keys.append(walker)
+                    #print("[INI] {0} | {1} | Adding value".format(element,path_to_element))
+                    #print_json(walker)
+                    #print("[END] {0} | {1} | Adding value".format(element,path_to_element))
+                    break
+                else:
+                    walker = walker[element]
+            else:
+                #print("[ERROR] getelementfromjson|{1}|key:{0} don't found in json.".format(element,path_to_element))
+                pass
+    #list_keys.append(walker)
+    #print_json(walker)
+    return list_keys
 #######################################################################################
 def list2json(list_field, list_value,remove_char=None,type_data=None,return_err=False):
     data_json = {}
