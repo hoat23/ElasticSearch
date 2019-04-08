@@ -165,7 +165,7 @@ class elasticsearch():
     
     def put_data(self, INDEX, data, debug=False,timeout=None):
         URL = self.url_elk + "/" + INDEX 
-        if(print):
+        if(debug):
             #json_data=json.loads(data) 
             print_json(data)
         
@@ -174,7 +174,7 @@ class elasticsearch():
 
     def post_data(self, INDEX, data, debug=False,timeout=None):
         URL = self.url_elk + "/" + INDEX 
-        if(print):
+        if(debug):
             #json_data=json.loads(data) 
             print_json(data)
         
