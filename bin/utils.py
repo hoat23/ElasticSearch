@@ -1,400 +1,407 @@
 #coding: UTF-8 
 #########################################################################################
 # Developer: Deiner Zapata Silva.
-# Date: 29/11/2018
-# Description: Codigo util, para uso general
+# Date: 19/11/2018
+# Description: Server to conect Streak - Webhoook
+# Link: https://ogma-dev.github.io/posts/simple-flask-webhook/
 # sys.setdefaultencoding('utf-8') #reload(sys)
+########### from flask import Flask, request, abort
 #########################################################################################
-import sys, requests, json, csv
-#from flask import Flask, request, abort
-import time, os, socket
-from subprocess import Popen, PIPE
-from collections import OrderedDict
-import functools, yaml #pip install pyyaml
-#######################################################################################
-def print_list(lista):
-    num = 0
-    for item in lista:
-        print("   {0:03d}. {1} ".format( num, item) )
-        num+=1
-    return
+import sys, requests, json
+from datetime import datetime, timedelta
+import time
 ########################################################################################
-def print_json(json_obj,codification='utf-8'):
-    try:
-        print(json.dumps(json_obj, indent=2, sort_keys=True))
-    except:
-        print("[ERROR] print_json -> error type={0}".format(type(json_obj)))
-    
-    return
+from utils import *
+########################################################################################
+URL = "https://9999999.us-east-1.aws.found.io:9243" #key/webhooks
+USER = "user"
+PASS = "passsssss"
 #######################################################################################
-def fileTXT_save(text, nameFile = "fileTXT_save.txt", coding='utf-8'):
-    fnew  = open(nameFile,"wb")
-    fnew.write(text.encode(coding)) # str(aux=[line])+'\n'
-    fnew.close() 
-    return
-#######################################################################################
-def count_elapsed_time(f,*args,**kwargs):
-    """
-    Decorator.
-    Calculate the elapsed time of a function.
-    """
-    def wrapper(*args):
-        #from time import time
-        start_time = time.time()
-        ret = f(*args,**kwargs)
-        elapsed_time = time.time() - start_time
-        print("[count_elapsed_time] "+f.__name__+"Elapsed time: %0.10f seconds." % elapsed_time)
-        return ret
-    return wrapper
-#######################################################################################
-def string2hex(s,char_sep=":"): #convert string to hex
-    lst = []
-    for ch in s:
-        num_ascci = ord(ch)
-        hv = hex(num_ascci).replace('0x', '')
-        if len(hv) == 1:
-            hv = '0'+hv
-        lst.append(hv)
-    if(len(lst)>0):
-        return functools.reduce(lambda x,y:x+char_sep+y, lst)
-    else:
-        #print("[ERROR] string2hex [{0}]".format(s))
-        return ""
-#######################################################################################
-"""
-    #Ejemplo de uso
-    data_json1 = {
-        "A1": 1,
-        "A2": {
-            "A2_1": 2,
-            "A2_2": {
-                "A2_2_1": 4,
-                "A2_3_4": 5
-            },
-            "A3": [
-                {
-                    "A3_1": 31,
-                    "A3_2": {
-                        "A3_2_1": 321,
-                        "A3_2_2": 322,
-                        "A3_2_3": [
-                            {
-                            "A3_2_3_1": 3231.1,
-                            "B1": {
-                                    "B1_1": 1.1
-                                }
-                            }
-                            ,
-                            {
-                            "A3_2_3_1": 3231.2
-                            }
-                        ]
-                    }
-                },
-                {
-                    "A3_1": 32,
-                    "A3_2": {
-                        "A3_2_3": [
-                            {
-                            "A3_2_3_1": 3231.3,
-                            "B1": {
-                                    "B1_1": 1.1
-                                }
-                            },
-                            {
-                            "A3_2_3_1": 3231.4
-                            }
-                        ]
-                    }
-                },
-                {
-                    "A3_1": 33
-                }
-            ]
-        }
-    }
-    path_element1 = "A2.[A3].A3_2.[A3_2_3].B1.B1_1"
-    rpt_json = getelementfromjson(data_json1,path_element1)
-    print_list(rpt_json)
-"""
-def getelementfromjson(data_json,path_to_element):
-    # Accede a un elemento anidado en un json, con un camino especificado de la forma
-    # path_to_element = "payload.aggregations.[clientes].[sedes][ip_s]"
-    list_keys = []
-    list_path_element = path_to_element.split(".")
-    walker = data_json
-    #print("PATH       :        "+ path_to_element)
-    for element in list_path_element:
-        current_path = path_to_element[ path_to_element.find(element)+len(element)+ 1: ]
-        #print("<{0}>".format(element))
-        if element.find("[")==0 and element.find("]")>0 :#si tiene corchetes, significa q es un array
-            #print("->    <{0}> {1}".format(element,current_path))
-            list_temp = []
-            only_element = element[1:len(element)-1]
-            if (only_element in walker):
-                array_walker = walker[only_element]
-                if len(current_path)==0: #Caso: agregar todo el array
-                    list_keys.append(array_walker)
-                    break
-                # Caso: recorrer el array
-                #print("[INI] {0} | {1} | values from array".format(element,current_path))
-                for element_in_array in array_walker:
-                    rpt_json = getelementfromjson(element_in_array,current_path)
-                    #print_json(rpt_json)
-                    if (type(rpt_json)==list):
-                        for val_in_list in rpt_json:
-                            list_keys.append(val_in_list)
-                    elif len(rpt_json)>0:
-                        list_keys.append(rpt_json)
-                #print("[END] {0} | {1} | values from array".format(element,current_path))
-                return list_keys
-            else:
-                #print("[ERROR] getelementfromjson|{1}| key:{0} don't found in json.".format(only_element,path_to_element))
-                pass
-        else:#sino, entonces es un elemento simple ha acceder en el json
-            #print("->    <{0}> {1}".format(element,current_path))
-            if (element in walker):
-                #Si es el fin del path, entonces solo queda agregar el elemento
-                if(len(current_path)==0):
-                    walker = walker[element]
-                    list_keys.append(walker)
-                    #print("[INI] {0} | {1} | Adding value".format(element,path_to_element))
-                    #print_json(walker)
-                    #print("[END] {0} | {1} | Adding value".format(element,path_to_element))
-                    break
-                else:
-                    walker = walker[element]
-            else:
-                #print("[ERROR] getelementfromjson|{1}|key:{0} don't found in json.".format(element,path_to_element))
-                pass
-    #list_keys.append(walker)
-    #print_json(walker)
-    return list_keys
-#######################################################################################
-def list2json(list_field, list_value,remove_char=None,type_data=None,return_err=False):
-    data_json = {}
-    len_field = len(list_field)
-    len_value = len(list_value)
-    flag_err = 0
+class elasticsearch():            
+    def __init__(self, url=None, user=None , pas=None):
+        global URL
+        global USER
+        global PASS
+        if(url==None):
+            self.url_elk = URL
+        else:
+            self.url_elk = url
+        
+        if(user==None):
+            self.user = USER
+        else:
+            self.user = user
+        
+        if(pas==None):
+            self.pas = PASS
+        else:
+            self.pas  = pas
+        
+        # _index / _type / _id
+        self.index = None
+        self.type = None
 
-    if (type_data!=None and len_field!=len(type_data)):
-        print("[ERROR] list2json type_data disabled.")
-        type_data=None
+    def get_url_elk(self):
+        return self.url_elk
 
-    if ( len_field > len_value):
-        print("[ERROR] list2json len_field:{0} > len_value:{1}".format(len_field,len_value))
-        for i in range(0,len_value):
-            print(" ->  {0:02d} |[{1}:{2}]".format(i, str(list_field[i]), str(list_value[i])))
-        for i in range(len_value,len_field):
-            print(" ->  {0:02d} |[{1}:NULL]".format(i, str(list_field[i])))
-        flag_err=-1
-    elif( len_field < len_value ):
-        print("[WARN] list2json len_field:{0} < len_value:{1}  ".format(len_field,len_value))
-        for i in range(0,len_field):
-            print(" ->  {0:02d} |[{1}:{2}]".format(i, str(list_field[i]), str(list_value[i]) ))
-        for i in range(len_field,len_value):
-            print(" ->  {0:02d} |[{1}]".format(i, str(list_value[i]) ))
-        flag_err=1
-    
-    for i in range(0,len_field):
-        if (len(list_field[i])>0):
-            if(remove_char!=None):
-                list_value[i]=list_value[i].replace(remove_char,"")
-            
-            if(type_data==None):
-                data_json.update({list_field[i] : list_value[i]})
-            else:
-                if(type_data[i]=='int'):
-                    data_json.update({list_field[i] : int(list_value[i])})
-                elif(type_data[i]=='float'):
-                    data_json.update({list_field[i] : float(list_value[i])})
-                else:
-                    data_json.update({list_field[i] : list_value[i]})
-            
-            if not(len(list_value[i])>0):
-                print("[WARN] field lost [{0}:{1}]".format(list_field[i],list_value[i]))
-                flag_err=2
-    
-    if(return_err):
-        return data_json, flag_err
-    else:
-        return data_json
-#######################################################################################
-def loadCSVtoJSON(path,encoding="utf-8"):
-    csvfile = open(path,encoding=encoding)
-    data = csv.DictReader(csvfile)#,delimiter =";",quotechar=";")
-    list_data = []
-    row = dict()
-    for row in data:
-        #print("loadCVStoJSON -> "+str(type(row)))
-        #print(row)
-        #list_data.append( dict( OrderedDict(row) ) ) 
-        list_data.append( row )
-    
-    print("["+str(path)+"] -> Datos cargados:" + str(len(list_data)))
-    return list_data
-###############################################################################
-def loadYMLtoJSON(path):
-    data_loaded = None
-    with open(path,'r') as stream:
+    def req_get(self, URL_API,data="",timeout=None):
+        if (URL_API==None): URL_API = self.url_elk
+        if (len(data)>0):
+            headers = {'Content-Type': 'application/json'}
+            data = json.dumps(data)
+            rpt = requests.get( url=URL_API , auth=(self.user,self.pas), headers=headers , data=data , timeout=timeout)
+        else:
+            rpt = requests.get( url=URL_API , auth=(self.user,self.pas), timeout=timeout)
+        
+        if not( (rpt.status_code)==200 or (rpt.status_code)==201 ):
+            print("[GET]: "+ str(rpt.status_code) +" | "+ str(rpt.reason))
+        
         try:
-            data_loaded = yaml.load(stream)
+            json_rpt = rpt.json()
+            #json_pretty = json.loads(rpt.text)
+            #print(json.dumps(json_pretty, indent=2, sort_keys=True))
         except:
-            print("[ERROR] loadYMLtoJSON")
-    return data_loaded
-#######################################################################################
-def isAliveIP(host, count=1, timeout=1000):
-    if sys.platform == 'win32':
-        count_arg = '-n'
-        timeout_arg = '-w'
-    else:
-        count_arg = '-c'
-        timeout_arg = '-W'
-
-    args = map(str, [ 'ping', count_arg, count, timeout_arg, timeout, host ])
-
-    p = Popen(args, stdout=PIPE, stderr=PIPE)
-    output, err = p.communicate()
-
-    # success
-    val = p.returncode
-    if p.returncode == 0:
-        #try:
-            #m = re.search("time=(\d+(?:\.\d+){0,1})\s*ms", output)
-            #time = float(m.group(1))
-            #time = 1
-        #except Exception, e:
-        #	time = -1
-        return True
-    else:
-        #time = None
-        return False    
-    #return (time, p.returncode)
-###############################################################################
-def renameValues(old_dict,old_value,value_to_set,cont=0):
-    new_dict = {}
-    if(cont==5):
-        return
-    for key,value in zip(old_dict.keys(),old_dict.values()):
-        #print("->{2} {0}:{1}".format(key,value,type(value)))
-        if type(value)==dict:
-            cont=cont+1
-            new_value =renameValues(value,old_value,value_to_set, cont)
-        elif(value==old_value):
-            new_value = value_to_set
-        else:
-            new_value = value
-        new_dict.update( {key : new_value} )
-    return new_dict
-###############################################################################
-def renameKeys(old_dict,dict_oldkey_newkey,cont=0):
-    new_dict = {}
-    if(cont==5):
-        return
-    for key,value in zip(old_dict.keys(), old_dict.values()):
-        #Analizando "value"
-        if type(value)==dict:
-            cont = cont + 1
-            new_value = renameKeys(value,dict_oldkey_newkey,cont)
-        else:
-            new_value = value
-        #Analizando "key"
-        if key in dict_oldkey_newkey:
-            new_key = dict_oldkey_newkey[key]
-        else:
-            new_key = key
-        new_dict[new_key] = new_value
-    return new_dict
-###############################################################################
-def build_table_json(list_name_keys, list_data_json):
-    #La unica condicion es que los datos tengas la misma cantidad de llaves
-    # list_name_keys = ['key1','key2',...]
-    # list_data_json = [{'aux1': 'val1', 'aux2':'VAL1',...},{'aux1':'val2','aux2':'VAL2',...},]
-    # return [{'key1':'val1','key2':'VAL1',...},{'key1': 'val2','key2': 'VAL2',...}, ...]
-    list_keys = list(list_data_json[0])
-    table_json = []
-    for key in list_keys:
-        rpt_json = {}
-        cont = 0
-        for data_json in list_data_json:
-            rpt_json.update( {list_name_keys[cont] : data_json[key]} )
-            table_json.append(rpt_json)
-            cont += 1
-    return table_json
-###############################################################################
-def convert_data(data_to_convert,strc_dict):
-    data_converted = {}
-    try:
-        # path_of_multi_dict: Especifica la ruta con los multiples diccionarios a cargar
-        if 'path_of_multi_dict' in strc_dict:
-            path_of_multi_dict = strc_dict['path_of_multi_dict']
-            dict_to_load = strc_dict['dict_to_load']
-            #print("dict "+dict_to_load)
-            dict_yml = loadYMLtoJSON(path_of_multi_dict)
-            dictionary = dict_yml[dict_to_load]
-            data_converted=renameKeys(data_to_convert, dictionary)
-        # strc_dict   : Es un diccionario que contiene multiples diccionarios
-        # dict_to_load: Especifica que diccionario se va a utilzar para convertir la data
-        elif 'dict_to_load' in strc_dict:
-            dict_to_load = strc_dict['dict_to_load']
-            dictionary = strc_dict['multi_dict'][dict_to_load]
-            data_converted=renameKeys(data_to_convert, dictionary)
-        else:
-            print("[ERROR] convert_data {0}".format(str(strc_dict)))
-            data_converted = data_to_convert
-        #print_json(data_converted)
-    except:
-        print("[ERROR] returned data without convert.")
-        data_converted = data_to_convert
-    return data_converted
+            json_rpt = rpt.text
+               
+        return json_rpt
     
-###############################################################################
-def send_json(msg, IP="0.0.0.0", PORT = 2233, dictionary={}, emulate=False):
-    """
-        #Configuracion en /etc/logstash/conf.d/logstash-syslog.conf
-        input{
-            tcp{
-                port => [PORT_NUMBER]
-                codec => json
+    def req_put(self, URL_API, data,timeout=None):
+        if (URL_API==None): URL_API = self.url_elk
+        headers =  {'Content-Type': 'application/json'}
+        if (URL_API==None): URL_API = self.url_elk
+        if type(data) != str :
+            data = json.dumps(data)
+
+        rpt = requests.put(URL_API, auth=(self.user,self.pas), headers=headers, data = data, timeout=timeout)
+        
+        if not( (rpt.status_code)==200 or (rpt.status_code)==201 ):
+            print("[PUT]:"+str(rpt.status_code)+" | "+ str(rpt.reason) )
+        
+        return
+    
+    def req_post(self, URL_API, data,timeout=None):
+        if (URL_API==None): URL_API = self.url_elk
+        headers =  {'Content-Type': 'application/json'}
+        if (URL_API==None): URL_API = self.url_elk
+        if type(data) != str :
+            data = json.dumps(data)
+        rpt = requests.post(URL_API, auth=(self.user,self.pas), headers=headers, data = data , timeout=timeout)
+        if not( (rpt.status_code)==200 or (rpt.status_code)==201 ):
+            print("[POST]:"+str(rpt.status_code)+" | "+ str(rpt.reason) )
+        
+        return
+
+    def req_del(self, URL_API,timeout=None):
+        rpt = requests.delete( url=URL_API , auth=(self.user,self.pas), timeout=None)
+        print("[DEL]:"+str(rpt.status_code)+" | "+ str(rpt.reason) )
+        return
+
+    def get_num_element(self, INDEX="" , TYPE=""):
+        if( len(INDEX)>0 ): INDEX ="/"+INDEX
+        if( len( TYPE)>0 ): TYPE = "/"+TYPE
+        
+        URL = self.url_elk + INDEX + TYPE + "/_search"
+        json_rpt = self.req_get(URL)
+        num_values = json_rpt['hits']['total']
+        return num_values        
+
+    def get_all_element(self, INDEX="", TYPE="" ):
+        if( len(INDEX)>0 ): INDEX ="/"+INDEX
+        if( len( TYPE)>0 ): TYPE = "/"+TYPE
+
+        URL = self.url_elk + INDEX + TYPE + "/_search"
+        query = {
+            "size": self.get_num_element(INDEX=INDEX,TYPE=TYPE),
+            "query":{
+                "match_all":{}
             }
         }
 
-        Si se desea convertir algunos campos antes de ser enviados
-        se pasa la variable dictionary
+        json_rpt = self.req_get(URL, data=query)
+        #print_json(json_rpt)
+        num_values = json_rpt['hits']['total']
+        values  = json_rpt['hits']['hits']
+        
+        return values, num_values
+
+    def show_all_idx(self, INDEX="", TYPE="" ):
+        if( len(INDEX)>0 ): INDEX ="/"+INDEX
+        if( len( TYPE)>0 ): TYPE = "/"+TYPE
+
+        URL = self.url_elk + INDEX + TYPE + "/_search"
+        query = {
+            "size": self.get_num_element(INDEX=INDEX,TYPE=TYPE),
+            "query":{
+                "match_all":{}
+            }
+        }
+
+        json_rpt = self.req_get(URL, data=query)
+        #print_json(json_rpt)
+        num_values = json_rpt['hits']['total']
+        values  = json_rpt['hits']['hits']
+        cont = 1
+        for e in values:
+            print("\t"+str(cont)+":"+str(num_values)+"\t_index : "+e["_id"])
+            cont = cont + 1 
+        return
+
+    def get_hits(self, INDEX="" , TYPE=""):
+        if( len(INDEX)>0 ): INDEX ="/"+INDEX
+        if( len( TYPE)>0 ): TYPE = "/"+TYPE
+
+        URL = self.url_elk + INDEX + TYPE + "/_search"
+        query = {
+            "query":{
+                "match_all":{}
+            }
+        }
+
+        json_rpt = self.req_get(URL, data=query)
+        print_json(json_rpt)
+        num_values = json_rpt['hits']['total']
+        values  = json_rpt['hits']['hits']
+        
+        print("\nnum: "+str(num_values))
+        return values, num_values
+    
+    def put_data(self, INDEX, data, debug=False,timeout=None):
+        URL = self.url_elk + "/" + INDEX 
+        if(print):
+            #json_data=json.loads(data) 
+            print_json(data)
+        
+        self.req_put(URL,data,timeout=None)
+        return
+
+    def post_data(self, INDEX, data, debug=False,timeout=None):
+        URL = self.url_elk + "/" + INDEX 
+        if(print):
+            #json_data=json.loads(data) 
+            print_json(data)
+        
+        self.req_post(URL,data)
+        return
+
+    def set_data(self, INDEX, TYPE, ID, data):
+        URL = self.url_elk + "/" + INDEX + "/" + TYPE + "/"+ ID
+        self.req_post(URL,data)
+        return
+
+    def get_by_id(self, INDEX, TYPE, ID):
+        URL = self.url_elk + "/" + INDEX + "/" + TYPE + "/"+ ID
+        json_rpt = self.req_get(URL)
+        return json_rpt
+
+    def delete_by_index(self,INDEX):
+        URL = self.url_elk + "/" + INDEX
+        self.req_del(URL)
+        return
+
+    def delete_by_id(self, INDEX, TYPE, ID):
+        URL = self.url_elk + "/" + INDEX + "/" + TYPE + "/"+ ID
+        self.req_del(URL)
+        return
+
+    def delete_by_list_of_index(self, LIST_INDEX):
+        for INDEX in LIST_INDEX:
+            self.delete_by_index(INDEX)
+        return
+
+    def post_bulk(self,list_data,header_json=None,random_if_not_found_id=False):
+        data2sent = ""
+        start_time = time.time()
+        if(len(list_data)==0):
+            print("[WARN] post_bulk | list_data is NULL.")
+            #time.sleep(1)
+            return
+        cont = 0
+        for lista in list_data :
+            cont = cont + 1
+            header_temp = {}
+            if(header_json==None):
+                # Significa que el _index, _type y _id estan especificados en list_data=[_index,_type,_id,_source]
+                #--------------------------------------------------------------------------------
+                header_temp = {
+                    "update":{
+                        "_index": lista["_index"],
+                        "_type" : lista["_type"],
+                        "_id" : lista["_id"],
+                        "_source": True
+                    }
+                }
+                #--------------------------------------------------------------------------------
+                body_temp = { "doc" :  lista["_source"] }
+                #--------------------------------------------------------------------------------
+            elif 'index' in header_json:
+                # header_json={"index":{"_index":"alertas","_type":"_doc","_id":"source_id"}}
+                if "_id" in header_json['index']: #Especifica la 'key' que tiene el id a ser sobreescrito
+                    nameKeyToSearch = header_json['index']['_id']
+                    try: 
+                        # Intentamos extraer el ID de lista_data
+                        _id = "{0}".format( lista[nameKeyToSearch] )
+                    except:
+                        if random_if_not_found_id :# El ID sera asignado por ELASTIC
+                            _id = None # Si key=None, entonces 'renameValues' elimina dicho campo del json
+                        else:# El Id es un contador interno único
+                            _id = "{0}".format( cont )
+                    finally:
+                        #Construimos el 'header' con la variable '_id'
+                        header_temp = renameValues(header_json,nameKeyToSearch,_id)
+                        body_temp = lista
+                else:
+                    header_temp = header_json
+                    body_temp = lista    
+            else:
+                header_temp = header_json
+                body_temp = lista
+            # Pasamos todo a string antes de ser enviada.
+            data2sent = data2sent +json.dumps(header_temp)+"\n"+json.dumps(body_temp) + "\n"
+        URL = self.url_elk + "/_bulk"
+        self.req_post(URL , data2sent )
+        elapsed_time = time.time() - start_time
+        print("[POST_BULK] Elapsed time : %.10f seconds\n" % elapsed_time)
+        return
+    
+    def algorithm(self,data):
+        raise NotImplementedError()
+
+    def algorithm_process_data(self,data):
+        FECHA_REGISTRO="2018-11-21 17:51:29"
+
+        if(data["VProd_EndpointSecurityThreatPrevention"] == "*"):
+            TipoProd="EST"
+        else: 
+            TipoProd="VSE"
+        
+        data.update({ "TipoProd" : TipoProd })
+        #print_json(data)
+        
+        IdMcafee={
+            "LastVersAgent" : "5.0.6.220",
+            "LastVSE1" : "8.8.0.1445",
+            "LastVSE2" : "8.8.0.1444",
+            "LastVSE3" : "8.8.0.1443",
+            "LastDAT1" : "9076",
+            "LastDAT2" : "9075",
+            "LastDAT3" : "9074",
+            "LastEST1" : "10.5.3.3264",
+            "LastEST2" : "10.5.3.3263",
+            "LastEST3" : "10.5.3.3262",
+            "LastAMC1" : "3527",
+            "LastAMC2" : "3526",
+            "LastAMC3" : "3525",
+            "InsFecha" : "2018-11-21 17:51:29"
+        }
+        #
+        if(data["VProd_Agent"]==IdMcafee["LastVersAgent"] and IdMcafee["InsFecha"]==FECHA_REGISTRO):
+            data.update({"Agent_status":"ACTUALIZADO"})
+        else:
+            data.update({"Agent_status":"DESACTUALIZADO"})
+        ###################################################
+        VERSION_DAT = data["V_DAT"]
+        VERSION_VSE = data["VProd_VSE"]
+        VERSION_AMC = data["V_AMCore_Content"]
+        VERSION_EST = data["VProd_EndpointSecurityThreatPrevention"]
+        ###################################################
+        data.update({"status_final":"DESACTUALIZADO"})
+        
+        if(data['TipoProd']=="VSE"):
+            data.update({"VSE_status":"DESACTUALIZADO"})
+            data.update({"DAT_status":"DESACTUALIZADO"})
+            if( (IdMcafee["InsFecha"]==FECHA_REGISTRO and  VERSION_VSE==IdMcafee["LastVSE1"]) or 
+                (IdMcafee["InsFecha"]==FECHA_REGISTRO and VERSION_VSE==IdMcafee["LastVSE2"]) or 
+                (IdMcafee["InsFecha"]==FECHA_REGISTRO and VERSION_VSE==IdMcafee["LastVSE3"]) ):
+                data.update({"VSE_status":"ACTUALIZADO"})
+            
+            if( (VERSION_DAT==IdMcafee["LastDAT1"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) or
+                (VERSION_DAT==IdMcafee["LastDAT2"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) or
+                (VERSION_DAT==IdMcafee["LastDAT3"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) ):
+                data.update({"DAT_status":"ACTUALIZADO"})
+            
+            if( data["VSE_status"]=="ACTUALIZADO" and data["DAT_status"]=="ACTUALIZADO" ):
+                data.update({"status_final":"ACTUALIZADO"})
+        else:
+            data.update({"VSE_status":"NO APLICA"})
+            data.update({"DAT_status":"NO APLICA"})
+        
+        if(data['TipoProd']=="EST"):
+            data.update({"EST_status":"DESACTUALIZADO"})
+            data.update({"AMC_status":"DESACTUALIZADO"})
+
+            if( (VERSION_EST==IdMcafee["LastEST1"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) or
+                (VERSION_EST==IdMcafee["LastEST2"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) or
+                (VERSION_EST==IdMcafee["LastEST3"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) ):
+                data.update({"EST_status":"ACTUALIZADO"})
+            
+            if( (VERSION_AMC==IdMcafee["LastAMC1"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) or
+                (VERSION_AMC==IdMcafee["LastAMC2"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) or
+                (VERSION_AMC==IdMcafee["LastAMC3"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) ):
+                data.update({"AMC_status":"ACTUALIZADO"})
+            
+            if( data["EST_status"]=="ACTUALIZADO" and data["AMC_status"]=="ACTUALIZADO" ):
+                data.update({"status_final":"ACTUALIZADO"})
+        else:
+            data.update({"EST_status":"NO APLICA"})
+            data.update({"AMC_status":"NO APLICA"})
+
+        return data
+    #######################################################################################    
+    #@count_elapsed_time
+    def process_data(self, INDEX,TYPE=""):
+        list_element, length = self.get_all_element(INDEX=INDEX,TYPE="")
+        #print(str(length))
+        #self.show_all_idx(INDEX=INDEX,TYPE="")
+        start_time = time.time()
+        cont = 0
+        list_data = []
+        for e in list_element:
+            try:
+                data = self.algorithm_process_data(e["_source"])
+                list_data.append({
+                        "_index":e["_index"],
+                        "_type" :e["_type"],
+                        "_id"   :e["_id"],
+                        "_source":data
+                    })
+                #self.set_data( e["_index"] , e["_type"] , e["_id"] , data )
+            except Exception as err:
+                print("\r Except...  "+"_id:"+e["_id"] + ": [ERROR :" + str(err)+"]")
+            finally:
+                cont = cont + 1
+        elapsed_time = time.time() - start_time
+        print("\n[PROCESS_DATA] Elapsed time : %.10f seconds\n" % elapsed_time)
+        self.post_bulk(list_data)
+        return
+
+    def process_repsol(self):
+        INDEX = "repsol_data"
+        self.process_data(INDEX,"_doc")
+        return
+#######################################################################################
+def test():
+    print("Test class elastic")
+    ec=elasticsearch()
+    #rpt_json = ec.req_get(ec.get_url_elk() + "/_cat/indices?v")
+    rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state")
+    print_json(rpt_json)
+    
     """
-    if(type(PORT)==str):
-        PORT = int(PORT)
-    try:
-        if(len(dictionary)>0):
-            msg = convert_data(msg,dictionary)
-        #Printing message
-        #print( "Sending message... emulate = {0}".format(emulate) )
-        if not (emulate): #If emulate=True don't send data to logstash
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect( (IP,PORT) )    
-            datajs = json.dumps(msg)
-            sock.sendall( datajs.encode() )
-            #print_json(msg)
-    except:
-        print("Error inesperado: "+sys.exc_info()[0])
-        #sys.exit(1)
-        return
-    finally:
-        try:
-            sock.close()
-        except:
-            pass
-        return
-#######################################################################################
-def save_yml(data_json, nameFile="data.yml"):
-    with open(nameFile, "w") as yaml_file:
-        yaml.dump(data_json, yaml_file, default_flow_style=False)
+    lista_json = loadCSVtoJSON("Todos_los_equipos_Peru.csv")
+    ec.delete_by_index("repsol")
+    ec.post_bulk(lista_json,headers={"index":{"_index":"repsol","_type":"_doc"}})
+    ec.process_repsol()
+    ec.algorithm()
+    """
+    
+    #ec.get_hits(INDEX="cars",TYPE="transactions")
+    #ec.get_hits(INDEX="repsol")
+    #ec.set_data("repsoll","_doc","7x8uV2cBidP485DQW1F5", {"Versión de producto (VirusScan Enterprise)":"HOAT23"} )
+    #ec.set_data("repsoll","_doc","-x8uV2cBidP485DQW1F5", {"Versión de producto (VirusScan Enterprise)":"HOAT23"} )
+    #ec.get_by_id("cars","transactions","1")
     return
 #######################################################################################
-def save_json(data_json, nameFile="data.json"):
-    with open(nameFile, 'w') as json_file:
-        for release in data_json.values():
-            json_file.write(release)
-            json_file.write("\n")
-    return
+if __name__=="__main__":
+    print("Running file python . . .\n\t["+str(__file__)+"]")
+    test()
 #######################################################################################
