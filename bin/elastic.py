@@ -13,9 +13,7 @@ import time
 ########################################################################################
 from utils import *
 ########################################################################################
-URL = "https://00000.us-east-1.aws.found.io:9243" #key/webhooks
-USER = "user"
-PASS = "pass"
+
 #######################################################################################
 class elasticsearch():            
     def __init__(self, url=None, user=None , pas=None):
@@ -85,7 +83,6 @@ class elasticsearch():
         if (URL_API==None): URL_API = self.url_elk
         if type(data) != str :
             data = json.dumps(data)
-        
         rpt = requests.post(URL_API, auth=(self.user,self.pas), headers=headers, data = data , timeout=timeout)
         if not( (rpt.status_code)==200 or (rpt.status_code)==201 ):
             print("[POST]:"+str(rpt.status_code)+" | "+ str(rpt.reason) )
@@ -166,7 +163,7 @@ class elasticsearch():
         print("\nnum: "+str(num_values))
         return values, num_values
     
-    def put_data(self, INDEX, data, print=False,timeout=None):
+    def put_data(self, INDEX, data, debug=False,timeout=None):
         URL = self.url_elk + "/" + INDEX 
         if(print):
             #json_data=json.loads(data) 
@@ -175,7 +172,7 @@ class elasticsearch():
         self.req_put(URL,data,timeout=None)
         return
 
-    def post_data(self, INDEX, data, print=False,timeout=None):
+    def post_data(self, INDEX, data, debug=False,timeout=None):
         URL = self.url_elk + "/" + INDEX 
         if(print):
             #json_data=json.loads(data) 
@@ -196,12 +193,12 @@ class elasticsearch():
 
     def delete_by_index(self,INDEX):
         URL = self.url_elk + "/" + INDEX
-        json_rpt = self.req_del(URL)
+        self.req_del(URL)
         return
 
     def delete_by_id(self, INDEX, TYPE, ID):
         URL = self.url_elk + "/" + INDEX + "/" + TYPE + "/"+ ID
-        json_rpt = self.req_del(URL)
+        self.req_del(URL)
         return
 
     def delete_by_list_of_index(self, LIST_INDEX):
@@ -209,17 +206,19 @@ class elasticsearch():
             self.delete_by_index(INDEX)
         return
 
-    def post_bulk(self,list_data,header_json=None):
+    def post_bulk(self,list_data,header_json=None,random_if_not_found_id=False):
         data2sent = ""
-        cont = 0
         start_time = time.time()
         if(len(list_data)==0):
-            print("[WARN] list_data is NULL.")
+            print("[WARN] post_bulk | list_data is NULL.")
             #time.sleep(1)
             return
-        
+        cont = 0
         for lista in list_data :
+            cont = cont + 1
+            header_temp = {}
             if(header_json==None):
+                # Significa que el _index, _type y _id estan especificados en list_data=[_index,_type,_id,_source]
                 #--------------------------------------------------------------------------------
                 header_temp = {
                     "update":{
@@ -232,13 +231,31 @@ class elasticsearch():
                 #--------------------------------------------------------------------------------
                 body_temp = { "doc" :  lista["_source"] }
                 #--------------------------------------------------------------------------------
+            elif 'index' in header_json:
+                # header_json={"index":{"_index":"alertas","_type":"_doc","_id":"source_id"}}
+                if "_id" in header_json['index']: #Especifica la 'key' que tiene el id a ser sobreescrito
+                    nameKeyToSearch = header_json['index']['_id']
+                    try: 
+                        # Intentamos extraer el ID de lista_data
+                        _id = "{0}".format( lista[nameKeyToSearch] )
+                    except:
+                        if random_if_not_found_id :# El ID sera asignado por ELASTIC
+                            _id = None # Si key=None, entonces 'renameValues' elimina dicho campo del json
+                        else:# El Id es un contador interno único
+                            _id = "{0}".format( cont )
+                    finally:
+                        #Construimos el 'header' con la variable '_id'
+                        header_temp = renameValues(header_json,nameKeyToSearch,_id)
+                        body_temp = lista
+                else:
+                    header_temp = header_json
+                    body_temp = lista    
             else:
                 header_temp = header_json
                 body_temp = lista
-            cont = cont + 1
+            # Pasamos todo a string antes de ser enviada.
             data2sent = data2sent +json.dumps(header_temp)+"\n"+json.dumps(body_temp) + "\n"
         URL = self.url_elk + "/_bulk"
-        #print(data2sent)
         self.req_post(URL , data2sent )
         elapsed_time = time.time() - start_time
         print("[POST_BULK] Elapsed time : %.10f seconds\n" % elapsed_time)
@@ -365,7 +382,7 @@ def test():
     ec=elasticsearch()
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cat/indices?v")
     rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state")
-    print(rpt_json)
+    print_json(rpt_json)
     
     """
     lista_json = loadCSVtoJSON("Todos_los_equipos_Peru.csv")
