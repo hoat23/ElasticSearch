@@ -13,14 +13,44 @@ host = "127.0.0.1"
 port = 8080
 app = Flask(__name__)
 #########################################################################################
+@app.route('/', methods=['GET'])
+def handle_verification():
+    if (request.args.get('hub.verfiy_token', '')==VERIFY_TOKEN_FB):
+        print("[GET] TOKEN VERFICADO")
+        return request.args.get('hub.challenge', '')
+    else:
+        print("[GET] TOKEN INCORRECTO")
+        return "Error, wrong validation token H23."
+#########################################################################################
+@app.route('/', methods=['POST'])
+def handle_message():
+    '''
+    Handle messages sent by facebook messenger to the application
+    '''
+    data = request.get_json()
+    if data["object"] == "page":
+        for entry in data["entry"]:
+            if messaging_event.get("message"):
+                sender_id = messaging_event["sender"]["id"]
+                recipient_id = messaging_event["recipient"]["id"]
+                message_text = messaging_event["message"]["text"]
+                send_message_response(sender_id, parse_natural_text(message_text))
+#########################################################################################
+def send_message(sender_id, message_text):
+    '''
+    Sending response back to theuser using facebook graph API
+    '''
+    r = requests.post(URL_API, params = qs, headers=headers, data = data, timeout=timeout)
+    return
+#########################################################################################
 def req_post(post_json , timeout=None):
     try: 
         URI_API = post_json['uri']
-        headers = post_json['qs']
+        params = post_json['qs']
         data = post_json['json']
-        headers.update({'Content-Type': 'application/json'})
+        headers = {'Content-Type': 'application/json'}
         if type(data) != str : data = json.dumps(data)
-        rpt = requests.post(URL_API, headers=headers, data = data , timeout=timeout)
+        rpt = requests.post(URL_API, params=params, headers=headers, data = data, timeout=timeout)
         if not( (rpt.status_code)==200 or (rpt.status_code)==201 ):
             print("{0}|INFO | req_post | {1} | {2} ".format( datetime.utcnow().isoformat() , rpt.status_code, rpt.reason) ) )
         
@@ -48,8 +78,7 @@ def callSendAPI(message ,sender_id="1610669258970681", type_msg = "RESPONSE" ):
         "qs": { "access_token": ACCESS_TOKEN_FB },
         "json": data_json
     }
-
     req_post( post_json )
-
     return
-
+#########################################################################################
+callSendAPI("Hola ...from Python")
