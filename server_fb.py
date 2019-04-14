@@ -34,25 +34,41 @@ def handle_message():
                 sender_id = messaging_event["sender"]["id"]
                 recipient_id = messaging_event["recipient"]["id"]
                 message_text = messaging_event["message"]["text"]
-                send_message_response(sender_id, parse_natural_text(message_text))
+                #send_message_response(sender_id, parse_natural_text(message_text))
+                send_message(sender_id, message_text)
+#########################################################################################
+def send_message_response(sender_id, message_text):
+    sentenceDelimiter = ". "
+    messages = message_text.split(sentenceDelimiter)
+    for message in messages:
+        send_message(sender_id, message)
+    return
 #########################################################################################
 def send_message(sender_id, message_text):
     '''
     Sending response back to theuser using facebook graph API
     '''
-    r = requests.post(URL_API, params = qs, headers=headers, data = data, timeout=timeout)
+    print("send_message({0})".format(message_text))
+    URL_API= "https://graph.facebook.com/v2.6/me/messages"
+    qs = {"acces_token" : ACCESS_TOKEN_FB}
+    headers = {"Content-Type": "application/json"}
+    data = json.dumps( {
+        "recipient": {"id": sender_id},
+        "message": {"text": message_text}
+    } )
+    r = requests.post(URL_API, params = qs, headers=headers, data = data )
     return
 #########################################################################################
 def req_post(post_json , timeout=None):
     try: 
-        URI_API = post_json['uri']
+        URL_API = post_json['uri']
         params = post_json['qs']
         data = post_json['json']
         headers = {'Content-Type': 'application/json'}
         if type(data) != str : data = json.dumps(data)
         rpt = requests.post(URL_API, params=params, headers=headers, data = data, timeout=timeout)
         if not( (rpt.status_code)==200 or (rpt.status_code)==201 ):
-            print("{0}|INFO | req_post | {1} | {2} ".format( datetime.utcnow().isoformat() , rpt.status_code, rpt.reason) ) )
+            print("{0}|INFO | req_post | {1} | {2} ".format( datetime.utcnow().isoformat() , rpt.status_code, rpt.reason) )
         
 
         print("{0}|INFO | req_post | URL_API=[{1}]".format(datetime.utcnow().isoformat(), URL_API) )
@@ -81,4 +97,6 @@ def callSendAPI(message ,sender_id="1610669258970681", type_msg = "RESPONSE" ):
     req_post( post_json )
     return
 #########################################################################################
-callSendAPI("Hola ...from Python")
+if __name__ == "__main__":
+    app.run()
+    #callSendAPI("Hola ...from Python")
