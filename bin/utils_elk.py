@@ -6,6 +6,20 @@
 import sys
 from datetime import datetime
 #######################################################################################
+def bytesELK2json(data,codification='utf-8'):
+    d_dict = {}
+    try:
+        if type(data)==bytes:
+            d_str = data.decode(codification)
+        else:
+            d_str = data
+        d_str = d_str.replace("false","False")
+        d_dict = eval(d_str) # casting string->json
+    except:
+       print("ERROR | bytes2ELK2json <{1}>type={0} ".format( type(data) , len(data) ))
+    finally:
+       return d_dict
+#######################################################################################
 def download_configuration_from_elk(elk):
     dict_client_ip = {}
     logstash = {}
