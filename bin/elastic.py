@@ -10,10 +10,8 @@
 import sys, requests, json
 from datetime import datetime, timedelta
 import time
-########################################################################################
+from credentials import * #URL="<elastic>" #USER="usr_elk"  #PASS="pass_elk"
 from utils import *
-########################################################################################
-
 #######################################################################################
 class elasticsearch():            
     def __init__(self, url=None, user=None , pas=None):
