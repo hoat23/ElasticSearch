@@ -90,7 +90,7 @@ def update_alert_by_groupIP(ip_list, description_alert_json):
                 list_data_json.append(alert_json_by_ip)
                 cont=cont+1
             else:
-                print("No se agrego la data a la lista.......ERROR")
+                print("[ERROR] No se agrego la data a la lista.......")
         else:
             print("[ERROR] update_alert_by_groupIP | IP:{0} don't save in ELK. ".format(ip))
     sendAlert2ELK(list_data_json,elk=elk)
@@ -122,4 +122,4 @@ def engine_elastic(data_json):
 #######################################################################################
 if __name__ == "__main__":
     print("[INICIO] Testing engine")
-#"192.168.21.3" tasa
+

@@ -37,7 +37,7 @@ def handle_verification():
 def handle_message():
     #Handle messages sent by facebook messenger to the application
     data_json = request.get_json()
-    print("{0}|INFO | POST | handle_message | len_data={1}".format( datetime.utcnow().isoformat() , len(data)))
+    print("{0}|INFO | POST | handle_message | length:{1}".format( datetime.utcnow().isoformat() , len(data_json)))
     rpt = engine_facebook(data_json)
     return rpt
 #######################################################################################
