@@ -435,8 +435,10 @@ def test_hmac_json():
 #######################################################################################
 def encode(str_to_encode, base_coding="base64", encoding='utf-8'):
     data_encoded = ""
+    flag_str=False
     try:
-        if type(str_to_encode)==str: 
+        if type(str_to_encode)==str:
+            flag_str = True
             data_bytes = str_to_encode.encode(encoding)
         else:
             data_bytes = str_to_encode
@@ -445,11 +447,17 @@ def encode(str_to_encode, base_coding="base64", encoding='utf-8'):
     except:
         print("[ERROR] encoded {1} [{0}]".format(str_to_encode, type(str_to_encode) ))
     finally:
-        return data_encoded
+        if flag_str:
+            return data_encoded.decode(encoding)
+        else:
+            return data_encoded
+#######################################################################################
 def decode(data_encoded, base_coding="base64", encoding='utf-8'):
     data_decoded = ""
+    flag_str=False
     try:
         if type(data_encoded)==str: 
+            flag_str = True
             data_bytes = data_encoded.encode(encoding)
         else:
             data_bytes = data_encoded
@@ -458,9 +466,15 @@ def decode(data_encoded, base_coding="base64", encoding='utf-8'):
     except:
         print("[ERROR] decode [{0}]".format(data_encoded))
     finally:
-        return data_decoded
+        if flag_str:
+            return data_decoded.decode(encoding)
+        else:
+            return data_decoded
 #######################################################################################
 if __name__ == "__main__":
     #Testing function
     print("[INFO] {0}".format(__file__ ))
-    test_hmac_json()
+    aux = encode("Hola mundo ".encode('utf-8'))
+    print(aux)
+    print(decode(aux))
+    #test_hmac_json()
