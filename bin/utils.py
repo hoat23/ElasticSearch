@@ -2,15 +2,18 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 29/11/2018
+# Last update: 05/05/2019
 # Description: Codigo util, para uso general
 # sys.setdefaultencoding('utf-8') #reload(sys)
 #########################################################################################
 import sys, requests, json, csv
 #from flask import Flask, request, abort
+import jwt # pip install pyjwt
 import time, os, socket
 from subprocess import Popen, PIPE
 from collections import OrderedDict
 import functools, yaml #pip install pyyaml
+import base64 as b64
 #######################################################################################
 def print_list(lista):
     num = 0
@@ -401,3 +404,63 @@ def save_json(data_json, nameFile="data.json"):
             json_file.write("\n")
     return
 #######################################################################################
+# doc_jwt http://ras-software-blog.com/?p=107
+def hmac_json_encode(data_json, password="", algorithm="HS256"):
+    #data_json_encrypted = header.payload.signature(openssl sha256 -hmac <password>)
+    data_json_to_encrypt = data_json
+    data_json_encrypted = jwt.encode(data_json_to_encrypt, password, algorithm=algorithm)
+
+    return data_json_encrypted
+#######################################################################################
+def hmac_json_decode(data_json, password="", algorithm="HS256"):
+    #data_json = header.payload.signature(openssl sha256 -hmac <password>)
+    data_json_to_decode = data_json
+    data_json_decoded = jwt.decode(data_json_to_decode, password, algorithm=algorithm)
+    return data_json_decoded
+#######################################################################################
+def test_hmac_json():
+    #function to test hmac algorithm
+    data_json = {
+        "FirstName":"Rob",
+        "LastName":"Stanfield",
+        "Occupation":"Software Developer"
+    }
+    data_signated = hmac_json_encode(data_json, password="ABC")
+    print("-----------------------------------------------------------\ndata signed:\n")
+    print("{0}".format(data_signated))
+    data_json = hmac_json_decode(data_signated, password="ABC")
+    print("-----------------------------------------------------------\ndata json :\n")
+    print_json(data_json)
+    return
+#######################################################################################
+def encode(str_to_encode, base_coding="base64", encoding='utf-8'):
+    data_encoded = ""
+    try:
+        if type(str_to_encode)==str: 
+            data_bytes = str_to_encode.encode(encoding)
+        else:
+            data_bytes = str_to_encode
+        data_encoded = b64.b64encode(data_bytes)
+        #print("[INFO ] encoded [{0}]".format(data_encoded))
+    except:
+        print("[ERROR] encoded {1} [{0}]".format(str_to_encode, type(str_to_encode) ))
+    finally:
+        return data_encoded
+def decode(data_encoded, base_coding="base64", encoding='utf-8'):
+    data_decoded = ""
+    try:
+        if type(data_encoded)==str: 
+            data_bytes = data_encoded.encode(encoding)
+        else:
+            data_bytes = data_encoded
+        data_decoded = b64.b64decode(data_encoded)
+        #print("[INFO ] decode [{0}]".format(data_decoded))
+    except:
+        print("[ERROR] decode [{0}]".format(data_encoded))
+    finally:
+        return data_decoded
+#######################################################################################
+if __name__ == "__main__":
+    #Testing function
+    print("[INFO] {0}".format(__file__ ))
+    test_hmac_json()
