@@ -2,9 +2,12 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 19/11/2018
+# Last update: 24/04/2019
 # Description: Server to conect Streak - Webhoook
+# Notes: Elastic only support binary data encoded in base64.
 # Link: https://ogma-dev.github.io/posts/simple-flask-webhook/
 # sys.setdefaultencoding('utf-8') #reload(sys)
+# {'index.routing.allocation.include.instance_configuration':'aws.data.highstorage.d2'}
 ########### from flask import Flask, request, abort
 #########################################################################################
 import sys, requests, json
@@ -58,7 +61,7 @@ class elasticsearch():
             #print(json.dumps(json_pretty, indent=2, sort_keys=True))
         except:
             json_rpt = rpt.text
-               
+        
         return json_rpt
     
     def req_put(self, URL_API, data,timeout=None):
@@ -379,7 +382,8 @@ def test():
     print("Test class elastic")
     ec=elasticsearch()
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cat/indices?v")
-    rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state")
+    #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state/_all/syslog-global-write")
+    rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state/nodes/syslog-global-write")
     print_json(rpt_json)
     
     """

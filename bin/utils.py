@@ -2,9 +2,12 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 29/11/2018
-# Last update: 05/05/2019
+# Last update: 06/05/2019
 # Description: Codigo util, para uso general
 # sys.setdefaultencoding('utf-8') #reload(sys)
+# hash- > hashlib https://recursospython.com/guias-y-manuales/hashlib-md5-sha/
+# crypto -> DES https://www.laurentluce.com/posts/python-and-cryptography-with-pycrypto/
+# pip install pycryptodome
 #########################################################################################
 import sys, requests, json, csv
 #from flask import Flask, request, abort
@@ -15,8 +18,8 @@ from collections import OrderedDict
 import functools, yaml #pip install pyyaml
 import base64 as b64
 #######################################################################################
-def print_list(lista):
-    num = 0
+def print_list(lista, num=0, sort=True):
+    if(sort): lista.sort()
     for item in lista:
         print("   {0:03d}. {1} ".format( num, item) )
         num+=1
@@ -474,7 +477,4 @@ def decode(data_encoded, base_coding="base64", encoding='utf-8'):
 if __name__ == "__main__":
     #Testing function
     print("[INFO] {0}".format(__file__ ))
-    aux = encode("Hola mundo ".encode('utf-8'))
-    print(aux)
-    print(decode(aux))
-    #test_hmac_json()
+    test_hmac_json()

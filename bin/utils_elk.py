@@ -1,24 +1,52 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Description: Procesar las alertas generadas
+# Last update: 07/05/2019
+# Description: Procesar las alertas generadas & otras utilerias
 #######################################################################################
-import sys
+import argparse, sys
 from datetime import datetime
+from elastic import *
 #######################################################################################
-def bytesELK2json(data,codification='utf-8'):
-    d_dict = {}
-    try:
-        if type(data)==bytes:
-            d_str = data.decode(codification)
-        else:
-            d_str = data
-        d_str = d_str.replace("false","False")
-        d_dict = eval(d_str) # casting string->json
-    except:
-       print("ERROR | bytes2ELK2json <{1}>type={0} ".format( type(data) , len(data) ))
-    finally:
-       return d_dict
+def download_cmdb_elk(elk=None, nameFile = "cmdb_elk.yml", coding='utf-8'):
+    if elk==None: elk=elasticsearch()
+    data_query = { #GET supra_data/_search
+        "size": 1000,
+        "_source": ["ip","cliente","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo"],
+        "query": {
+            "bool": {
+            "must": [
+                {"exists": {"field": "ip"}}
+            ]
+            }
+        }
+    }
+    URL_API = "{0}/supra_data/_search".format(elk.get_url_elk())
+    data_response = elk.req_get(URL_API, data = data_query)
+    if len(data_response)<0:
+        print("ERROR | {0} download_cmdb_elk | Failed to download data from elasticsearch.".format(datetime.utcnow().isoformat()))
+    #print_json(data_response)
+    array_data = getelementfromjson(data_response, "hits.[hits]._source")
+    list_datos = ["ip","cliente","nombre_cluster","ip_group","modelo_equipo"]
+    
+    fnew  = open(nameFile,"wb")
+    for data_json in array_data:
+        line = "\"{0}\"".format( data_json[list_datos[0]] )
+        for i in range(1,len(list_datos)):
+            field = list_datos[i]
+            try:
+                value = data_json[field]
+            except:
+                value = "*"
+            finally:
+                if i==1:
+                    line = "{0} : {1}".format ( line, value )
+                else:
+                    line = "{0};{1}".format ( line, value )
+        line = line+"\n"
+        fnew.write(line.encode(coding))
+    fnew.close()
+    return array_data
 #######################################################################################
 def download_configuration_from_elk(elk):
     dict_client_ip = {}
@@ -49,6 +77,31 @@ def download_configuration_from_elk(elk):
         print("ERROR | {0} download_configuration | 'logstash' key don't exists in json response.".format(datetime.utcnow().isoformat()))
     
     return dict_client_ip, logstash
+#######################################################################################
+def flush_index(name_index):
+    #Limpia la data de un index sin eliminar el indice
+    return
+#######################################################################################
+def block_write_index(name_index, write_block=False):
+    # Si write_block=True, bloque <name_index> contro escritura
+    elk = elasticsearch()
+    URL_FULLPATH = "{0}/_settings".format( elk.get_url_elk() )
+    elk.req_put(URL_FULLPATH, data={"index.blocks.write":write_block})
+    return
+#######################################################################################
+def get_list_index(names_index,filter_idx_sys=True, show_properties="settings.index.blocks.write"):
+    elk = elasticsearch()
+    URL_FULLPATH = "{0}/{1}/_settings".format( elk.get_url_elk() , names_index)
+    if names_index.find(".")==0: filter_idx_sys=False
+    rpt_json = elk.req_get(URL_FULLPATH)
+    list_idx = []
+    print_json(rpt_json)
+    for key in rpt_json:
+        if key.find(".")!=0 and  filter_idx_sys:
+            list_idx.append(key)
+        if not filter_idx_sys:
+            list_idx.append(key)
+    print_list(list_idx, num=1)
 #######################################################################################
 def enrich_data_from(list_keys,list_key_to_add,dictionary):
     return {}
@@ -117,7 +170,7 @@ def build_watcher(label_watch_id="heartbeat_ping", indices = ["heartbeat-*"], in
     "webhook_test" : {
         "webhook" : {
         "scheme" : "http",
-        "host" : "<IP_LOGSTASH>",
+        "host" : "54.208.72.130",
         "port" : 3009,
         "method" : "post",
         "path" : "/",
@@ -132,3 +185,32 @@ def build_watcher(label_watch_id="heartbeat_ping", indices = ["heartbeat-*"], in
 }
     
     return watcher
+#######################################################################################
+def get_parametersCMD():
+    command = value = None
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c","--command",help="Comando a ejecutar en la terminal [ ]")
+    parser.add_argument("-v","--value",help="Comando a ejecutar en la terminal [ ]")
+    args = parser.parse_args()
+
+    if args.command: command = str(args.command)
+    if args.value: value = str(args.value) 
+
+    if( command==None):
+        print("ERROR: Faltan parametros.")
+        print("command\t [{0}]".format(command))
+        sys.exit(0)
+    if command=="update" and value=="cmdb_elk.yml":
+        print("INFO  | update {0}".format(value))
+        download_cmdb_elk()
+    elif command=="get_list_idx" and value!=None:
+        get_list_index(value) #value=".*"
+    else:
+        print("ERROR | No se ejecuto ninguna accion.")
+    return
+#######################################################################################
+if __name__ == "__main__":
+    #block_write_index("syslog-alianza-write", write_block=True)
+    #get_list_index(".*")
+    get_parametersCMD()
+    pass
