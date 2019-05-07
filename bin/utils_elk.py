@@ -10,9 +10,10 @@ from elastic import *
 #######################################################################################
 def download_cmdb_elk(elk=None, nameFile = "cmdb_elk.yml", coding='utf-8'):
     if elk==None: elk=elasticsearch()
+    list_datos = ["ip","cliente","sede","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo"]
     data_query = { #GET supra_data/_search
         "size": 1000,
-        "_source": ["ip","cliente","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo"],
+        "_source": list_datos,
         "query": {
             "bool": {
             "must": [
@@ -27,7 +28,6 @@ def download_cmdb_elk(elk=None, nameFile = "cmdb_elk.yml", coding='utf-8'):
         print("ERROR | {0} download_cmdb_elk | Failed to download data from elasticsearch.".format(datetime.utcnow().isoformat()))
     #print_json(data_response)
     array_data = getelementfromjson(data_response, "hits.[hits]._source")
-    list_datos = ["ip","cliente","nombre_cluster","ip_group","modelo_equipo"]
     
     fnew  = open(nameFile,"wb")
     for data_json in array_data:
