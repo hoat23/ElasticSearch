@@ -200,9 +200,9 @@ def get_parametersCMD():
         print("ERROR: Faltan parametros.")
         print("command\t [{0}]".format(command))
         sys.exit(0)
-    if command=="update" and value=="cmdb_elk.yml":
+    if command=="update" and value!=None:
         print("INFO  | update {0}".format(value))
-        download_cmdb_elk()
+        download_cmdb_elk(nameFile=value)
     elif command=="get_list_idx" and value!=None:
         get_list_index(value) #value=".*"
     else:
