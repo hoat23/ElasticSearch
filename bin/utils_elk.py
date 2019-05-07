@@ -8,17 +8,18 @@ import argparse, sys
 from datetime import datetime
 from elastic import *
 #######################################################################################
-def download_cmdb_elk(elk=None, nameFile = "cmdb_elk.yml", coding='utf-8'):
-    if elk==None: elk=elasticsearch()
+def download_cmdb_elk(elk=None, q_filter = {}, nameFile = "cmdb_elk.yml", coding='utf-8'):
     list_datos = ["ip","cliente","sede","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo"]
+    array_filter = [ {"exists": {"field": "ip"}} ]
+    
+    if elk==None: elk=elasticsearch()
+    if q_filter!={} : array_filter.append(q_filter)
     data_query = { #GET supra_data/_search
         "size": 1000,
         "_source": list_datos,
         "query": {
             "bool": {
-            "must": [
-                {"exists": {"field": "ip"}}
-            ]
+            "must": array_filter
             }
         }
     }
@@ -26,7 +27,7 @@ def download_cmdb_elk(elk=None, nameFile = "cmdb_elk.yml", coding='utf-8'):
     data_response = elk.req_get(URL_API, data = data_query)
     if len(data_response)<0:
         print("ERROR | {0} download_cmdb_elk | Failed to download data from elasticsearch.".format(datetime.utcnow().isoformat()))
-    #print_json(data_response)
+    print_json(data_response)
     array_data = getelementfromjson(data_response, "hits.[hits]._source")
     
     fnew  = open(nameFile,"wb")
@@ -187,22 +188,27 @@ def build_watcher(label_watch_id="heartbeat_ping", indices = ["heartbeat-*"], in
     return watcher
 #######################################################################################
 def get_parametersCMD():
-    command = value = None
+    command = value = client = None
     parser = argparse.ArgumentParser()
     parser.add_argument("-c","--command",help="Comando a ejecutar en la terminal [ ]")
     parser.add_argument("-v","--value",help="Comando a ejecutar en la terminal [ ]")
+    parser.add_argument("-f","--client",help="Commando para filtar por cliente [ ]")
     args = parser.parse_args()
 
     if args.command: command = str(args.command)
     if args.value: value = str(args.value) 
-
+    if args.client: client = str(args.client) 
     if( command==None):
         print("ERROR: Faltan parametros.")
         print("command\t [{0}]".format(command))
         sys.exit(0)
     if command=="update" and value!=None:
         print("INFO  | update {0}".format(value))
-        download_cmdb_elk(nameFile=value)
+        if client !=None :
+            q_filter = {"match": {"cliente": client}}
+        else:
+            q_filter = {}
+        download_cmdb_elk(nameFile=value,q_filter=q_filter)
     elif command=="get_list_idx" and value!=None:
         get_list_index(value) #value=".*"
     else:
