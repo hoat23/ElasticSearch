@@ -1,7 +1,7 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 07/05/2019
+# Last update: 08/05/2019
 # Description: Procesar las alertas generadas & otras utilerias
 #######################################################################################
 import argparse, sys
@@ -41,10 +41,10 @@ def download_cmdb_elk(elk=None, q_filter = {}, nameFile = "cmdb_elk.yml", coding
                 value = "*"
             finally:
                 if i==1:
-                    line = "{0} : {1}".format ( line, value )
+                    line = "{0} : \"{1}".format ( line, value )
                 else:
                     line = "{0};{1}".format ( line, value )
-        line = line+"\n"
+        line = line+"\"\n"
         fnew.write(line.encode(coding))
     fnew.close()
     return array_data
