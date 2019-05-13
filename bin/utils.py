@@ -486,18 +486,19 @@ def decode(data_encoded, base_coding="base64", encoding='utf-8'):
         else:
             return data_decoded
 #######################################################################################
-
-def get_only_name_from_fullpath(fullpath):
-    only_name = ""
-
-    return only_name
-
 def download_files_from_github():
     list_files_to_update = ["https://raw.githubusercontent.com/hoat23/ElasticSearch/master/bin/utils_elk.py"]
     print("[INFO] download_files_from_github() ")
     for full_path in list_files_to_update:
         only_name_file = os.path.basename(full_path)
-        command = "wget {0} -O {1}".format(full_path, only_name_file)
+        if get_type_so()=="windows":
+            par1 = "curl"
+        elif get_type_so()=="linux":
+            par1 = "wget"
+        else:
+            print("[ERROR] download_files_from_github | SO = {0}".format(get_type_so()))
+            return 
+        command = "{0} {1} -O {2}".format(par1, full_path, only_name_file)
         rpt = os.system(command)
         print(rpt)
     return
@@ -505,4 +506,5 @@ def download_files_from_github():
 if __name__ == "__main__":
     #Testing function
     print("[INFO] {0}".format(__file__ ))
-    test_hmac_json()
+    download_files_from_github()
+    #test_hmac_json()
