@@ -1,7 +1,7 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 08/05/2019
+# Last update: 13/05/2019
 # Description: Procesar las alertas generadas & otras utilerias
 #######################################################################################
 import argparse, sys
@@ -27,7 +27,7 @@ def download_cmdb_elk(elk=None, q_filter = {}, nameFile = "cmdb_elk.yml", coding
     data_response = elk.req_get(URL_API, data = data_query)
     if len(data_response)<0:
         print("ERROR | {0} download_cmdb_elk | Failed to download data from elasticsearch.".format(datetime.utcnow().isoformat()))
-    print_json(data_response)
+    #print_json(data_response)
     array_data = getelementfromjson(data_response, "hits.[hits]._source")
     
     fnew  = open(nameFile,"wb")
@@ -79,6 +79,18 @@ def download_configuration_from_elk(elk):
     
     return dict_client_ip, logstash
 #######################################################################################
+def download_watchers(elk=None):
+    data_query = { #GET supra_data/_search
+        "size": 1000,
+        "query": {
+            "match_all": {}
+            }
+        }
+    
+    URL_API = "{0}/.watches/_search".format(elk.get_url_elk())
+    data_response = elk.req_get(URL_API, data = data_query)
+    return
+#######################################################################################
 def flush_index(name_index):
     #Limpia la data de un index sin eliminar el indice
     return
@@ -96,7 +108,7 @@ def get_list_index(names_index,filter_idx_sys=True, show_properties="settings.in
     if names_index.find(".")==0: filter_idx_sys=False
     rpt_json = elk.req_get(URL_FULLPATH)
     list_idx = []
-    print_json(rpt_json)
+    #print_json(rpt_json)
     for key in rpt_json:
         if key.find(".")!=0 and  filter_idx_sys:
             list_idx.append(key)
@@ -217,6 +229,8 @@ def get_parametersCMD():
 #######################################################################################
 if __name__ == "__main__":
     #block_write_index("syslog-alianza-write", write_block=True)
-    #get_list_index(".*")
-    get_parametersCMD()
+    get_list_index("syslog-*")
+    #print("----")
+    get_list_index("*-write")
+    #get_parametersCMD()
     pass

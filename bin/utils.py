@@ -1,8 +1,8 @@
 #coding: UTF-8 
 #########################################################################################
 # Developer: Deiner Zapata Silva.
-# Date: 29/11/2018
-# Last update: 06/05/2019
+# Date: 30/11/2018
+# Last update: 13/05/2019
 # Description: Codigo util, para uso general
 # sys.setdefaultencoding('utf-8') #reload(sys)
 # hash- > hashlib https://recursospython.com/guias-y-manuales/hashlib-md5-sha/
@@ -249,6 +249,18 @@ def loadYMLtoJSON(path):
             print("[ERROR] loadYMLtoJSON")
     return data_loaded
 #######################################################################################
+def get_type_so():
+    system_so = "error"
+    type_sys = sys.platform
+    if type_sys.find("linux")>=0:
+        system_so = "linux"
+    elif type_sys.find("win")>=0:
+        system_so = "windows"
+    else:
+        system_so = type_sys
+        print("[INFO] get_type_so | {0}".format(system_so))
+    return system_so
+#######################################################################################
 def isAliveIP(host, count=1, timeout=1000):
     if sys.platform == 'win32':
         count_arg = '-n'
@@ -473,6 +485,22 @@ def decode(data_encoded, base_coding="base64", encoding='utf-8'):
             return data_decoded.decode(encoding)
         else:
             return data_decoded
+#######################################################################################
+
+def get_only_name_from_fullpath(fullpath):
+    only_name = ""
+
+    return only_name
+
+def download_files_from_github():
+    list_files_to_update = ["https://raw.githubusercontent.com/hoat23/ElasticSearch/master/bin/utils_elk.py"]
+    print("[INFO] download_files_from_github() ")
+    for full_path in list_files_to_update:
+        only_name_file = os.path.basename(full_path)
+        command = "wget {0} -O {1}".format(full_path, only_name_file)
+        rpt = os.system(command)
+        print(rpt)
+    return
 #######################################################################################
 if __name__ == "__main__":
     #Testing function
