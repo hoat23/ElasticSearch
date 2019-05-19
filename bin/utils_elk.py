@@ -1,7 +1,7 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 13/05/2019
+# Last update: 19/05/2019
 # Description: Procesar las alertas generadas & otras utilerias
 #######################################################################################
 import argparse, sys
@@ -116,6 +116,19 @@ def get_list_index(names_index,filter_idx_sys=True, show_properties="settings.in
             list_idx.append(key)
     print_list(list_idx, num=1)
 #######################################################################################
+def get_resume_status_nodes():
+    elk = elasticsearch()
+    URL_FULLPATH = "{0}/_nodes/stats".format( elk.get_url_elk() )
+    rpt_json = elk.req_get(URL_FULLPATH)
+    #print_json(rpt_json)
+    #save_yml(rpt_json,nameFile="nodes_elk.yml")
+    list_nodes = []
+    path = "nodes.*.{attributes.instance_configuration,fs.total.{free_in_bytes,total_in_bytes}}"
+    
+    for node in rpt_json['nodes']:
+        list_nodes.append(node)
+    print_list(list_nodes)
+#######################################################################################
 def enrich_data_from(list_keys,list_key_to_add,dictionary):
     return {}
 #######################################################################################
@@ -227,10 +240,67 @@ def get_parametersCMD():
         print("ERROR | No se ejecuto ninguna accion.")
     return
 #######################################################################################
+def download_watches(filter={"match_all":{}}, elk=elasticsearch(), nameFile="watches.yml"):
+    list_watches = []
+    query = {
+        "size": 10000,
+        "query": filter
+        #,"_source": ["_id"]
+    }
+    URL = "{0}/.watches/_search".format( elk.get_url_elk() )
+    rpt_json = elk.req_get(URL, data=query)
+    list_watches = getelementfromjson(rpt_json, "hits.[hits]")[0]
+    rpt_json =[]
+    for watch in list_watches:
+        _id = watch['_id']
+        _source = watch['_source']
+        _trigger = watch['_source']['trigger']
+        _input = watch['_source']['input']
+        _condition = watch['_source']['condition']
+        _actions = watch['_source']['actions']
+        _metadata = watch['_source']['metadata']
+        #_status = watch['_source']['status']['state']['active']
+        tmp_json = {
+            _id: {
+                "metadata": _metadata,
+                "trigger": _trigger,
+                "input": _input,
+                "condition": _condition,
+                "actions": _actions
+            }
+        }
+        rpt_json.append(tmp_json)
+    if len(rpt_json)>0:
+        #print_json(list_watches)
+        print("{1}| download_watches| INFO | downloading <{0}>".format(nameFile, datetime.utcnow().isoformat()))
+        get_list_watches()
+        #save_yml({"watches": rpt_json}, nameFile)
+    else:
+        print("{1}| download_watches| ERROR | downloading <{0}>".format(nameFile, datetime.utcnow().isoformat()))
+    return
+#######################################################################################
+def get_list_watches(filter={"match_all": {}}, elk=elasticsearch()):
+    list_watches = []
+    query = {
+        "size": 10000,
+        "query": filter,
+        "_source": ["_id"]
+    }
+    
+    URL = "{0}/.watches/_search".format( elk.get_url_elk() )
+    rpt_json = elk.req_get(URL, data=query)
+    #print_json(rpt_json)
+    list_watches = getelementfromjson(rpt_json, "hits.[hits]._id")
+    print_list(list_watches , num=1)
+    return list_watches
+#######################################################################################
 if __name__ == "__main__":
+    print("[INI] utils_elk.py")
     #block_write_index("syslog-alianza-write", write_block=True)
-    get_list_index("syslog-*")
-    #print("----")
-    get_list_index("*-write")
+    #get_resume_status_nodes()
+    #get_list_index("*-group*")
+    #get_list_index("*-write")
     #get_parametersCMD()
+    #get_list_watches()
+    download_watches()
     pass
