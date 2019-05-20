@@ -212,34 +212,6 @@ def build_watcher(label_watch_id="heartbeat_ping", indices = ["heartbeat-*"], in
     
     return watcher
 #######################################################################################
-def get_parametersCMD():
-    command = value = client = None
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c","--command",help="Comando a ejecutar en la terminal [ ]")
-    parser.add_argument("-v","--value",help="Comando a ejecutar en la terminal [ ]")
-    parser.add_argument("-f","--client",help="Commando para filtar por cliente [ ]")
-    args = parser.parse_args()
-
-    if args.command: command = str(args.command)
-    if args.value: value = str(args.value) 
-    if args.client: client = str(args.client) 
-    if( command==None):
-        print("ERROR: Faltan parametros.")
-        print("command\t [{0}]".format(command))
-        sys.exit(0)
-    if command=="update" and value!=None:
-        print("INFO  | update {0}".format(value))
-        if client !=None :
-            q_filter = {"match": {"cliente": client}}
-        else:
-            q_filter = {}
-        download_cmdb_elk(nameFile=value,q_filter=q_filter)
-    elif command=="get_list_idx" and value!=None:
-        get_list_index(value) #value=".*"
-    else:
-        print("ERROR | No se ejecuto ninguna accion.")
-    return
-#######################################################################################
 def download_watches(filter={"match_all":{}}, elk=elasticsearch(), nameFile="watches.yml"):
     list_watches = []
     query = {
@@ -274,10 +246,11 @@ def download_watches(filter={"match_all":{}}, elk=elasticsearch(), nameFile="wat
         #print_json(list_watches)
         print("{1}| download_watches| INFO | downloading <{0}>".format(nameFile, datetime.utcnow().isoformat()))
         get_list_watches()
-        #save_yml({"watches": rpt_json}, nameFile)
+        if nameFile!=None:
+            save_yml({"watches": rpt_json}, nameFile)
     else:
         print("{1}| download_watches| ERROR | downloading <{0}>".format(nameFile, datetime.utcnow().isoformat()))
-    return
+    return rpt_json
 #######################################################################################
 def get_list_watches(filter={"match_all": {}}, elk=elasticsearch()):
     list_watches = []
@@ -294,13 +267,43 @@ def get_list_watches(filter={"match_all": {}}, elk=elasticsearch()):
     print_list(list_watches , num=1)
     return list_watches
 #######################################################################################
+def get_parametersCMD():
+    command = value = client = None
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c","--command",help="Comando a ejecutar en la terminal [update, get_list_idx, download_watches ]")
+    parser.add_argument("-v","--value",help="Comando a ejecutar en la terminal [nameFile.jml ]")
+    parser.add_argument("-f","--client",help="Commando para filtar por cliente [ ]")
+    args = parser.parse_args()
+
+    if args.command: command = str(args.command)
+    if args.value: value = str(args.value) 
+    if args.client: client = str(args.client) 
+    if( command==None):
+        print("ERROR: Faltan parametros.")
+        print("command\t [{0}]".format(command))
+        sys.exit(0)
+    if command=="update" and value!=None:
+        print("INFO  | update {0}".format(value))
+        if client !=None :
+            q_filter = {"match": {"cliente": client}}
+        else:
+            q_filter = {}
+        download_cmdb_elk(nameFile=value,q_filter=q_filter)
+    elif command=="get_list_idx" and value!=None:
+        get_list_index(value) #value=".*"
+    elif command=="download_watches":
+        download_watches(nameFile=value)
+    else:
+        print("ERROR | No se ejecuto ninguna accion.")
+    return
+#######################################################################################
 if __name__ == "__main__":
     print("[INI] utils_elk.py")
+    get_parametersCMD()
     #block_write_index("syslog-alianza-write", write_block=True)
     #get_resume_status_nodes()
     #get_list_index("*-group*")
     #get_list_index("*-write")
-    #get_parametersCMD()
     #get_list_watches()
-    download_watches()
+    #download_watches()
     pass
