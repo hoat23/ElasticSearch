@@ -1,0 +1,213 @@
+{
+    "trigger" : {
+      "schedule" : {
+        "interval" : "2m"
+      }
+    },
+    "input" : {
+      "chain" : {
+        "inputs" : [
+          {
+            "busqueda_heartbeat" : {
+              "search" : {
+                "request" : {
+                  "search_type" : "query_then_fetch",
+                  "indices" : [
+                    "heartbeat-*"
+                  ],
+                  "rest_total_hits_as_int" : true,
+                  "body" : {
+                    "_source" : [
+                      "monitor.id",
+                      "monitor.status",
+                      "http.url",
+                      "cmdb"
+                    ],
+                    "size" : 0,
+                    "query" : {
+                      "match_all" : { }
+                    },
+                    "aggs" : {
+                      "servicios" : {
+                        "terms" : {
+                          "field" : "cmdb.reporting_ip.keyword",
+                          "size" : 1000
+                        },
+                        "aggs" : {
+                          "estados" : {
+                            "terms" : {
+                              "field" : "monitor.status"
+                            },
+                            "aggs" : {
+                              "latest_status" : {
+                                "top_hits" : {
+                                  "sort" : [
+                                    {
+                                      "@timestamp" : {
+                                        "order" : "desc"
+                                      }
+                                    }
+                                  ],
+                                  "_source" : {
+                                    "includes" : [
+                                      "@timestamp",
+                                      "monitor.status",
+                                      "http.url",
+                                      "cmdb"
+                                    ]
+                                  },
+                                  "size" : 1
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "busqueda_alertas" : {
+              "search" : {
+                "request" : {
+                  "search_type" : "query_then_fetch",
+                  "indices" : [
+                    "alertas*"
+                  ],
+                  "rest_total_hits_as_int" : true,
+                  "body" : {
+                    "size" : 0,
+                    "query" : {
+                      "match_all" : { }
+                    },
+                    "aggs" : {
+                      "cliente" : {
+                        "terms" : {
+                          "field" : "cmdb.client",
+                          "size" : 1000
+                        },
+                        "aggs" : {
+                          "cluster_name" : {
+                            "terms" : {
+                              "field" : "cmdb.cluster_name",
+                              "size" : 1000
+                            },
+                            "aggs" : {
+                              "reporting_ip" : {
+                                "terms" : {
+                                  "field" : "cmdb.reporting_ip",
+                                  "size" : 1000
+                                },
+                                "aggs" : {
+                                  "alert_id" : {
+                                    "terms" : {
+                                      "field" : "alert_type.watcherid",
+                                      "size" : 10
+                                    },
+                                    "aggs" : {
+                                      "status" : {
+                                        "top_hits" : {
+                                          "sort" : [
+                                            {
+                                              "alert_status.last_run" : {
+                                                "order" : "desc"
+                                              }
+                                            }
+                                          ],
+                                          "_source" : {
+                                            "includes" : [
+                                              "alert_status",
+                                              "_id"
+                                            ]
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "condition" : {
+      "script" : {
+        "source" : """
+            def servicios = [];
+            def alert_id = ctx.payload.busqueda_alertas.hits.total;
+            for (def servicio: ctx.payload.busqueda_heartbeat.aggregations.servicios.buckets) {
+              def latest_up = "2000-01-01T00:00:00.000Z";
+              def latest_down = "2000-01-01T00:00:00.000Z";
+              def cmdb_json = null;
+              
+              for(def estado: servicio.estados.buckets){
+                  def estado_source = estado.latest_status.hits.hits[0]._source;
+                  if(estado.key == "up"){
+                    latest_up = estado_source['@timestamp'];
+                  }else{
+                    latest_down = estado_source['@timestamp'];
+                  }
+                  cmdb_json = estado_source['cmdb'];
+              }
+              
+              def sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+              def latest_up_date = sdf.parse(latest_up).getTime();
+              def latest_down_date = sdf.parse(latest_down).getTime();
+              
+              def latest_state = null;
+              if(latest_up_date > latest_down_date){
+                latest_state = "up";
+              }else{
+                latest_state = "down";
+              }
+              alert_id += 1;
+              servicios.add([
+                    "_id": alert_id,
+                    "alert_id": alert_id,
+                    "alert_type": [
+                      "index": "heartbeat",
+                      "watcherid" : "alertas_heartbeat"
+                      ],
+                    "servicio": servicio.key,
+                    "alert_status": [
+                      "last_run": ctx.trigger.triggered_time.toString(),
+                      "latest_up": latest_up,
+                      "latest_down": latest_down,
+                      "value": latest_state
+                      ],
+                    "cmdb": cmdb_json
+                  ]);
+            }
+
+            ctx.payload._doc = servicios;
+            return true;
+""",
+        "lang" : "painless"
+      }
+    },
+    "throttle_period_in_millis" : 1000,
+    "actions" : {
+      "index_payload" : {
+        "index" : {
+          "index" : "alertas"
+        }
+      }
+    },
+    "metadata" : {
+      "index" : "heartbeat",
+      "threshold" : 60,
+      "window" : "2m"
+    }
+  }
