@@ -1,0 +1,288 @@
+{
+  "heartbeat-group01-000002" : {
+    "mappings" : {
+      "dynamic_templates" : [
+        {
+          "undefined_string_fields" : {
+            "match_mapping_type" : "string",
+            "mapping" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        {
+          "no_doc_values" : {
+            "match_mapping_type" : "*",
+            "mapping" : {
+              "type" : "{dynamic_type}"
+            }
+          }
+        }
+      ],
+      "properties" : {
+        "@timestamp" : {
+          "type" : "date"
+        },
+        "@version" : {
+          "type" : "integer"
+        },
+        "beat" : {
+          "properties" : {
+            "hostname" : {
+              "type" : "keyword"
+            },
+            "name" : {
+              "type" : "keyword"
+            },
+            "version" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "client" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "client_sede_ip" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "cmdb" : {
+          "properties" : {
+            "categoria" : {
+              "type" : "keyword"
+            },
+            "client" : {
+              "type" : "keyword"
+            },
+            "cluster_name" : {
+              "type" : "keyword"
+            },
+            "hash" : {
+              "type" : "keyword"
+            },
+            "ip_group" : {
+              "type" : "keyword"
+            },
+            "marca" : {
+              "type" : "keyword"
+            },
+            "model" : {
+              "type" : "keyword"
+            },
+            "reporting_ip" : {
+              "type" : "ip",
+              "fields" : {
+                "keyword" : {
+                  "type" : "keyword"
+                }
+              }
+            },
+            "sede" : {
+              "type" : "keyword"
+            },
+            "type_device" : {
+              "type" : "keyword"
+            },
+            "wan_group" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "cmdb_json" : {
+          "properties" : {
+            "client" : {
+              "type" : "keyword"
+            },
+            "cluster_name" : {
+              "type" : "keyword"
+            },
+            "devip" : {
+              "type" : "ip",
+              "fields" : {
+                "keyword" : {
+                  "type" : "keyword"
+                }
+              }
+            },
+            "hash" : {
+              "type" : "keyword"
+            },
+            "model" : {
+              "type" : "keyword"
+            },
+            "sede" : {
+              "type" : "keyword"
+            },
+            "type_device" : {
+              "type" : "keyword"
+            },
+            "wan_group" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "devip" : {
+          "type" : "ip"
+        },
+        "elk" : {
+          "properties" : {
+            "index" : {
+              "type" : "keyword"
+            },
+            "logstash" : {
+              "type" : "keyword"
+            },
+            "tags" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "elk_index" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "error" : {
+          "properties" : {
+            "message" : {
+              "type" : "keyword"
+            },
+            "type" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "event" : {
+          "properties" : {
+            "dataset" : {
+              "type" : "text",
+              "fields" : {
+                "keyword" : {
+                  "type" : "keyword"
+                }
+              }
+            }
+          }
+        },
+        "function_ip" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "icmp" : {
+          "properties" : {
+            "requests" : {
+              "type" : "long"
+            },
+            "rtt" : {
+              "properties" : {
+                "us" : {
+                  "type" : "long"
+                }
+              }
+            }
+          }
+        },
+        "logstash" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "monitor" : {
+          "properties" : {
+            "duration" : {
+              "properties" : {
+                "us" : {
+                  "type" : "long"
+                }
+              }
+            },
+            "id" : {
+              "type" : "keyword"
+            },
+            "ip" : {
+              "type" : "keyword"
+            },
+            "name" : {
+              "type" : "keyword"
+            },
+            "status" : {
+              "type" : "keyword"
+            },
+            "type" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "name_device" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "pais" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "requests" : {
+          "type" : "long"
+        },
+        "rtt" : {
+          "properties" : {
+            "us" : {
+              "type" : "long"
+            }
+          }
+        },
+        "sede" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "tags" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "type_device" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        }
+      }
+    }
+  }
+}
