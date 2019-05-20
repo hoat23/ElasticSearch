@@ -2,7 +2,7 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 19/11/2018
-# Last update: 24/04/2019
+# Last update: 19/05/2019
 # Description: Server to conect Streak - Webhoook
 # Notes: Elastic only support binary data encoded in base64.
 # Link: https://ogma-dev.github.io/posts/simple-flask-webhook/
@@ -18,9 +18,6 @@ from utils import *
 #######################################################################################
 class elasticsearch():            
     def __init__(self, url=None, user=None , pas=None):
-        global URL
-        global USER
-        global PASS
         if(url==None):
             self.url_elk = URL
         else:
@@ -380,10 +377,14 @@ class elasticsearch():
 #######################################################################################
 def test():
     print("Test class elastic")
-    ec=elasticsearch()
-    #rpt_json = ec.req_get(ec.get_url_elk() + "/_cat/indices?v")
+    #ec=elasticsearch(url=URL_M,user=USER_M,pas=PASS_M)
+    ec=elasticsearch(url=URL,user=USER,pas=PASS)
+    #ec=elasticsearch()
+    #rpt_json = ec.req_get(ec.get_url_elk() + "/_cat/indices?v") #_search?pretty
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state/_all/syslog-global-write")
-    rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state/nodes/syslog-global-write")
+    #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/health?pretty")
+    rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state?pretty")
+    #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state/nodes/syslog-global-write")
     print_json(rpt_json)
     
     """
