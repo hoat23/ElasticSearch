@@ -15,6 +15,7 @@ import jwt # pip install pyjwt
 import time, os, socket
 from subprocess import Popen, PIPE
 from collections import OrderedDict
+from pygments import lexers, formatters, highlight
 import functools, yaml #pip install pyyaml
 import base64 as b64
 #######################################################################################
@@ -25,9 +26,20 @@ def print_list(lista, num=0, sort=True):
         num+=1
     return
 ########################################################################################
-def print_json(json_obj,codification='utf-8'):
+def format_json(json_obj):
+    return json.dumps(json_obj, indent=2, sort_keys=True)
+
+def format_json_color(obj):
+    return highlight(format_json(obj) , lexers.JsonLexer(), formatters.TerminalFormatter()) 
+
+def print_json(json_obj,codification='utf-8', color_print=False):
+    print( format_json_color(json_obj) )#colorize_json(format_json(data))) 
     try:
-        print(json.dumps(json_obj, indent=2, sort_keys=True))
+        if (color_print):
+            print( format_json_color(json_obj) )#colorize_json(format_json(data))) 
+        else:
+            json_formatted = json.dumps(json_obj, indent=2, sort_keys=True)
+            print(json_formatted)
     except:
         print("[ERROR] print_json -> error type={0}".format(type(json_obj)))
     
