@@ -1,0 +1,43 @@
+input {
+  pipeline {
+    address => "supra-filter"
+  }
+}
+
+filter {
+    if [cmdb][reporting_ip]{
+        translate {
+            field => "[cmdb][reporting_ip]"
+            destination => "[csvdata]"
+            dictionary_path => "/usr/share/logstash/cmdb_elk.yml"
+            fallback => "default"
+        }
+        
+        if [cmdb][client]{
+            mutate{
+            remove_field => ["[cmdb][client]"]
+            }
+        }
+
+        #"_source": ["ip","cliente","sede","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo"],
+        csv {
+            source => "csvdata"
+            separator => ";"
+            columns => ["[cmdb][client]","[cmdb][sede]","[cmdb][cluster_name]" , "[cmdb][ip_group]" , "[cmdb][categoria]", "[cmdb][model]", "[cmdb][marca]"]
+        }
+    
+        mutate{
+            remove_field => ["csvdata"]
+        }
+    }else{
+        mutate{
+            add_field => {"[elk][tags]" => "not_found_cmdb.reporting_ip"}
+        }
+    }
+}
+
+output {
+    pipeline {
+        send_to => "supra-output"
+    }
+}

@@ -1,0 +1,33 @@
+input {
+
+  beats {
+    port => 6464
+    ssl => false
+    add_field => {"[elk][index]" => "heartbeat"}
+  }
+  
+  beats {
+    port => 4646
+    ssl => false
+    add_field => {"[elk][index]" => "metricbeat"}
+  }
+
+}
+
+filter {
+
+    if [elk][index]=="heartbeat" {
+        mutate{
+        add_field => {"[cmdb][reporting_ip]" => "%{[monitor][ip]}"}
+        remove_field => ["[host]","[meta]"]
+        add_field => {"[client]" => "%{[monitor][name]}"}
+        }
+    }
+
+}
+
+output {
+    pipeline {
+        send_to => "supra-filter"
+    }
+}

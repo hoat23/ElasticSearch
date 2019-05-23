@@ -1,0 +1,147 @@
+input {
+    #Download gateway crontab "/usr/share/logstash/exec_api_gateway.sh"
+    #schedule => "0 3 * * *"
+    
+    
+    #Download Backup
+    #exec {
+    #    command => "/usr/share/logstash/exec_api_backup.sh"
+    #    schedule => "0 1 * * *"
+    #}
+
+    #Download IOC
+    #exec {
+    #    command => "/usr/share/logstash/exec_information_security.sh"
+    #    schedule => "0 2 * * *" 
+    #    add_field => {"elk_index" => "debug_python"}
+    #}
+    
+    ##Upload patron_reducido_sunat
+    #exec {
+    #    command => "/usr/share/logstash/uploading_padron_reducido_ruc_to_elastic.sh"
+    #    #schedule => "* 1 * * 0"
+    #    schedule => "* 14 * * 0"
+    #    add_field => {"elk_index" => "debug_python"}
+    #}
+    
+    #Interface_status & cpu_mem #snmp-ifreserve-00001 value is out of range for "long"
+    #exec {
+    #    command => "/usr/share/logstash/interface_status.sh"
+    #    interval => 90
+    #    add_field => {"elk_index" => "debug_python"}
+    #}
+    
+    #Monitoring every 24hr
+    #exec {
+    #    command => "/usr/share/logstash/snmp_monitoring_24hr.sh"
+    #    schedule => "0 2 * * *"
+    #    add_field => {"elk_index" => "debug_python"}
+    #}
+    
+    #tcp{
+    #    # BackupConfigFW - procesosFW - Otros
+    #    port => 6060
+    #    codec => json
+    #    add_field => {"elk_index" => "backup"}
+    #}
+
+    tcp{
+        # BackupConfigFW - procesosFW - Otros
+        port => 5959
+        codec => json
+        add_field => {"[elk][index]" => "moreinfofw"}
+    }
+}
+
+filter {
+    if [devip]{
+        mutate{
+            add_field => ["[cmdb][reporting_ip]", "%{[devip]}"]
+            remove_field => ["devip"]
+        }
+    }
+    
+    if [rename_index]{
+        mutate{
+            replace => ["[elk][index]", "%{rename_index}"]
+            remove_field => ["rename_index"]
+        }
+        
+        if [elk][index]!="snmp"{
+            mutate{
+                remove_field => ["host"]
+            }
+        }
+
+        if [elk][index]=="snmp"{
+            date {
+                match => ["datetime", "YY-MM-dd HH:mm:ss.SSS"]
+                target => "@timestamp"
+            }
+        }
+    }
+
+    if [results]{
+        #split {
+        #    field => "results"
+        #}
+        
+        
+        mutate {
+            rename => ["[results][distance]", "distance" ]
+            rename => ["[results][gateway]", "gateway" ]
+            rename => ["[results][ip_mask]", "ip_mask" ]
+            rename => ["[results][ip_version]", "ip_version" ]
+            rename => ["[results][is_tunnel_route]", "is_tunnel_route" ]
+            rename => ["[results][metric]", "metric" ]
+            rename => ["[results][tunnel_parent]", "tunnel_parent" ]
+            rename => ["[results][type]", "type" ]
+            rename => ["[results][interface]", "interface"]
+        }
+    }else if [source] {
+        split {
+            field => "source"
+        }
+        
+        mutate {
+            rename => ["[source][type]" ,"type"]
+            rename => ["[source][dynamic-gateway]" ,"dynamic-gateway"]
+            rename => ["[source][gateway]" ,"gateway"]
+            rename => ["[source][status]" ,"status"]
+            rename => ["[source][q_path]" ,"q_path"]
+            rename => ["[source][priority]" ,"priority"]
+            rename => ["[source][q_origin_key]" ,"q_origin_key"]
+            rename => ["[source][distance]" ,"distance"]
+            rename => ["[source][virtual-wan-link]" ,"virtual-wan-link"]
+            rename => ["[source][blackhole]" ,"blackhole"]
+            rename => ["[source][dstaddr]" ,"dstaddr"]
+            rename => ["[source][q_name]" ,"q_name"]
+            rename => ["[source][q_static]" ,"q_static"]
+            rename => ["[source][mkey_type]" ,"mkey_type"]
+            rename => ["[source][ip_version]" ,"ip_version"]
+            rename => ["[source][q_ref]" ,"q_ref"]
+            rename => ["[source][internet-service-custom]" ,"internet-service-custom"]
+            rename => ["[source][seq-num]" ,"seq-num"]
+            rename => ["[source][device]" ,"device"]
+            rename => ["[source][weight]" ,"weight"]
+            rename => ["[source][dst]" ,"dst"]
+            rename => ["[source][q_type]" ,"q_type"]
+            rename => ["[source][q_no_rename]" ,"q_no_rename"]
+            rename => ["[source][comment]" ,"comment"]
+            rename => ["[source][internet-service]" ,"internet-service"]
+        }
+
+        mutate {
+            remove_field => ["columns"]
+        }
+    }
+    
+}
+
+output {
+    
+    pipeline {
+        send_to => "supra-filter"
+    }
+    
+}
