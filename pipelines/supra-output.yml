@@ -1,0 +1,81 @@
+input {
+  pipeline {
+    address => "supra-output"
+  }
+
+}
+
+filter {
+    
+    translate {
+        field => "[cmdb][reporting_ip]"
+        destination => "[csvdata]"
+        dictionary_path => "/etc/logstash/dict_IP.yml"
+        fallback => "default"
+    }
+    
+    #"_source": ["ip","cliente","sede","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo"],
+    csv {
+        source => "[csvdata]"
+        separator => ";"
+        columns => ["[client]","[sede]","[type_device]" , "[name_device]", "[function_ip]"]
+    }
+
+    mutate{
+        remove_field => ["csvdata"]
+        add_field => {"[devip]" => "%{[cmdb][reporting_ip]}" }
+    }
+
+    if [client] and [sede] and [devip]{
+        fingerprint {
+          	source => ["client","sede","devip"]
+          	target => "[cmdb][hash]"
+            method => "SHA1"
+            key => "Hoat23"
+            base64encode => true
+        }
+        mutate {
+            add_field => {"[client_sede_ip]" => "%{[client]}-%{[sede]}-%{[devip]}" }
+        }
+    }
+    
+    mutate {
+        add_field => {"[elk][logstash]" => "aws" }
+    }
+
+    if[elk][index]=="heartbeat"{
+        mutate {
+            remove_field => ["[monitor][id]"]
+            add_field => {"[monitor][id]" => "%{[cmdb][client]}-%{[cmdb][sede]}-%{[cmdb][reporting_ip]}" }
+        }
+    }
+
+    if [tags] {
+        mutate {
+            add_field => { "[elk][tags]" => "%{[tags]}" }
+            remove_field => [ "[tags]" ]
+        }
+    }
+}
+
+output {
+
+    if [elk][index]=="syslog" or [elk][index]=="heartbeat" or [elk][index]=="health" or [elk][index]=="snmp" {
+        elasticsearch {
+        hosts => ["https://miurl_to_elk.us-east-1.aws.found.io:9243"]
+        user => "my_user"
+        password => "my_password"
+        index => "%{[elk][index]}-group01-write"
+        }
+    }else {
+        if [elk][index] {
+        elasticsearch {
+        hosts => ["https://miurl_to_elk.us-east-1.aws.found.io:9243"]
+        user => "my_user"
+        password => "my_password"
+        index => "%{[elk][index]}-error"
+        }
+        }
+    }
+    
+}
