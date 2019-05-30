@@ -1,7 +1,7 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 19/05/2019
+# Last update: 30/05/2019
 # Description: Procesar las alertas generadas & otras utilerias
 #######################################################################################
 import argparse, sys
@@ -462,19 +462,21 @@ def get_parametersCMD():
         get_list_index(value) #value=".*"
     elif command=="download_watches":
         download_watches(nameFile=value)
+    elif command=="download_incidencias":
+        download_incidencias()
     else:
         print("ERROR | No se ejecuto ninguna accion.")
     return
 #######################################################################################
 if __name__ == "__main__":
     print("[INI] utils_elk.py")
-    #get_parametersCMD()
+    get_parametersCMD()
     #block_write_index("syslog-alianza-write", write_block=True)
     #get_resume_status_nodes()
     #get_list_index("*-write")
     #get_list_watches()
     #download_watches()
     #get_list_index("*-group*")
-    download_incidencias()
+    #download_incidencias()
     #get_incidencia("network_device_status")
     pass
