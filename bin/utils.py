@@ -16,6 +16,7 @@ import time, os, socket
 from subprocess import Popen, PIPE
 from collections import OrderedDict
 from pygments import lexers, formatters, highlight
+from jinja2 import Environment, FileSystemLoader #pip install jinja2
 import functools, yaml #pip install pyyaml
 import base64 as b64
 #######################################################################################
@@ -33,7 +34,7 @@ def format_json_color(obj):
     return highlight(format_json(obj) , lexers.JsonLexer(), formatters.TerminalFormatter()) 
 
 def print_json(json_obj,codification='utf-8', color_print=False):
-    print( format_json_color(json_obj) )#colorize_json(format_json(data))) 
+    #print( format_json_color(json_obj) )#colorize_json(format_json(data))) 
     try:
         if (color_print):
             print( format_json_color(json_obj) )#colorize_json(format_json(data))) 
@@ -513,6 +514,29 @@ def download_files_from_github(list_files_to_download):
         rpt = os.system(command)
         print(rpt)
     return
+#######################################################################################
+def load_template(template, save_file=False, name_save_template="template_render.html"):
+    """
+        template = {
+            "fields":{},
+            "file_html": "default.html"
+        }
+    """
+    file_template = None
+    try:
+        file_loader = FileSystemLoader('templates')
+        env = Environment(loader=file_loader)
+        file_template = env.get_template(template['file_html'])
+        output = file_template.render(template)
+        if (save_file):
+            print("[INFO ] get_template | Saving template [{0}]".format(name_save_template))
+            fileTXT_save(output, nameFile=name_save_template)
+    except Exception as e:
+        print("[ERROR ] get_template | {0}".format(e))
+    except:
+        print("[ERROR ] get_template | Error not defined.")
+    finally:
+        return output
 #######################################################################################
 if __name__ == "__main__":
     #Testing function
