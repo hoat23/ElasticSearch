@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <table width="1024" border="0" cellpadding="5" cellspacing="0" style="border-bottom:1px solid #000000">
+    <tbody><tr>
+      <th color="#FFFFFF" bgcolor="#001A89" colspan="6" height="40" style="border-bottom:1px solid #000000">
+      <div align="left">
+        <img src="https://github.com/hoat23/hoat23.github.io/blob/df889571acc808a533a733ab2d2b8d29b73d9cd1/img/supranetwork(horizontal)centerwhite.png?raw=true" width="140" height="60" alt="cabecera mail" class="CToWUd"></img>
+      </div>
+      <font color="#FFFFFF" size="4" face="Arial">Incident Status [{{fields.incident_status_value}}]</font></th>
+    </tr>
+    <tr>
+      <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000"><b>Rule Name</b></td>
+      <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000">{{fields.rule_name}}</td>
+      <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000"><b>Source </b></td>
+      <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000">{{fields.incident_source}}</td>
+      <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000"><b>Event Severity</b></td>
+      <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000">{{fields.incident_severity_category}}</td>
+    </tr>
+    <tr>
+      <td bgcolor="#F7FDFA" height="26" colspan="1" style="border-bottom:1px solid #000000"><b>Incident Description<font size="2" face="Arial"></font></b></td>
+      <td bgcolor="#F7FDFA" height="26" colspan="5" style="border-bottom:1px solid #000000">{{fields.rule_description}}</td>
+    </tr>
+      <tr>
+        <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000"><strong>Incident First Occurrence Time<font size="2" face="Arial"></font></strong></td>
+        <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000">{{fields.first_run}}</td>
+        <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000"><strong>Incident Last Occurrence Time<font size="2" face="Arial"></font></strong></td>
+        <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000">{{fields.last_run}}</td>
+        <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000"><b>Incident duration<font size="2" face="Arial"> </font></b></td>
+        <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000">{{fields.duration}}</td>
+    </tr>
+      <tr>
+      <td bgcolor="#F7FDFA" height="26" style="border-bottom:1px solid #000000"><b>Client<font size="2" face="Arial"> </font></b></td>
+      <td bgcolor="#F7FDFA" height="26" style="border-bottom:1px solid #000000">{{fields.cmdb_client}}</td>
+      <td bgcolor="#F7FDFA" height="26" style="border-bottom:1px solid #000000"><b>Sede</b></td>
+      <td bgcolor="#F7FDFA" height="26" style="border-bottom:1px solid #000000">{{fields.cmdb_sede}}</td>
+      <td bgcolor="#F7FDFA" height="26" style="border-bottom:1px solid #000000"><b>Reporting Device</b></td>
+      <td bgcolor="#F7FDFA" height="26" colspan="3" style="border-bottom:1px solid #000000">{{fields.cmdb_reporting_ip}}</td>
+    </tr>
+    <tr>
+      <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000"><b><font size="2" face="Arial">Incident Notification</font></b></td>
+      <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000">{{fields.notification_recipients}}</td>
+      <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000"><strong><font size="2" face="Arial">Incident Target</font></strong></td>
+      <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000">{{fields.incident_target}}</td>
+      <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000"><b><font size="2" face="Arial">Incident ID</font></b></td>
+      <td bgcolor="#DBEFFB" height="26" style="border-bottom:1px solid #000000"><font size="2" face="Arial">{{fields.incident_id}}</font></td>
+    </tr>
+    <tr>
+      <th height="30" colspan="6" bgcolor="#001A89" style="border-bottom:1px solid #0000000"><font color="#FFFFFF">Raw Events Log</font></th>
+    </tr>
+    <tr>
+      <td bgcolor="#DBEFFB" colspan="6">
+        {{fields.more_detail}}
+      </td>
+    </tr>
+  </tbody></table>
+</html>
