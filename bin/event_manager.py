@@ -27,12 +27,12 @@ def build_data_aditional(data_json):
         data = ip['last_status']['hits']['hits'][0]['_source']
         data_aditional.append("     {0:16s}   |   {1:10s}   |   {2:10s}   |   {3:10s}".format( data['cmdb']['reporting_ip'],data['cmdb']['categoria'],data['cmdb']['ip_group'],data['monitor']['status']))
     return data_aditional
-@app.route('/', methods=['POST'])
+@app.route('/incidencias_elk', methods=['POST'])
 def post_incidencias_elk():
     print("{0}|INFO | POST | incidencias_elk".format( datetime.utcnow().isoformat() ))
     path = "aggregations.incidencia_types.[buckets].clientes.[buckets].cluster_name.[buckets].last_run.hits.[hits]._id"
     data_json = request.json
-    save_yml(data_json, nameFile="incidencias_elk.yml")
+    #save_yml(data_json, nameFile="incidencias_elk.yml")
     for incidencia_type in data_json['aggregations']['incidencia_types']['buckets']:
         #print("incidencia_type     : " + incidencia_type['key'])
         for cliente in incidencia_type['clientes']['buckets']:
