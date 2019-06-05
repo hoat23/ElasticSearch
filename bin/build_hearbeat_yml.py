@@ -2,18 +2,22 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 06/03/2019
+# Last update: 05/06/2019
 # Description: Codigo para actualizacion de archivo de configuración de heartbeat.yml
 #########################################################################################
 # Fases del programa.
 # 1. Conexion y descarga de la configuracion de ELK
 # 2. Construccion de los archivos necesarios de configuraciòn
-# 3. Reinicio de los servicios respectivos
-# 4. Validaciòn de las configuraciones 
+# 3. Reinicio de los servicios respectivos 
 #########################################################################################
 import time, sys, os, platform, json
 from elastic import elasticsearch
 from utils import *
+from utils_elk import *
 from datetime import datetime
+#######################################################################################
+CLIENTE = 'YANBAL'
+#######################################################################################
 class reconfigurate_hearbeat():
     def __init__(self):
         # Windows, linux, win32
@@ -32,39 +36,23 @@ class reconfigurate_hearbeat():
         return
 
     def download_configuracion(self,client):
-        self.client = client
-        dict_client_ip = {}
-        logstash = {}
-        data_query = { #GET index_configuration/_search?filter_path=hits.hits._source.logstash
-            "query": {
-                "bool": {
-                    "must": [
-                        {"exists": {"field": "dict_client_ip"}},
-                        {"exists": {"field": "logstash"}}
-                    ]
-                }
-            }
-        }
-        
-        data_response = self.elk.req_get(self.elk.get_url_elk()+"/index_configuration/_search?filter_path=hits.hits._source",data=data_query)['hits']['hits'][0]['_source']
-        if len(data_response)<0:
-            print("ERROR | {0} download_configuration | Failed to download data from elasticsearch.".format(datetime.utcnow().isoformat()))
-            sys.exit(0)
-        
-        if 'dict_client_ip' in data_response: 
-            dict_client_ip =  data_response['dict_client_ip']
+        #client: "AWS", "TASA", "YANBAL"
+        self.client = client.lower()
+        elk = elasticsearch()
+        self.logstash = download_configuration_from_elk(elk)
+        URL_FULLPATH = "{0}/index_configuration/_doc/dict_monitoring_{1}".format( elk.get_url_elk() ,  self.client.replace(" ","_") )
+        self.dict_client_ip = elk.req_get( URL_FULLPATH )
+        save_yml(self.dict_client_ip, nameFile="dict_monitoring_"+self.client.replace(" ","_"))
+        print( "|INFO | download_configuration dict_monitoring_"+self.client.replace(" ","_")+".yml")
+        if "_source" in self.dict_client_ip:
+            self.dict_client_ip = self.dict_client_ip['_source']
+            self.dict_client_ip = bucket_to_dictionary(self.dict_client_ip['buckets'])
         else:
-            print("ERROR | {0} download_configuration | 'dict_client_ip' key don't exists in json response.".format(datetime.utcnow().isoformat()))
-            sys.exit(0)
-        if 'logstash' in data_response:
-            logstash = data_response['logstash']
-        else:
-            print("ERROR | {0} download_configuration | 'logstash' key don't exists in json response.".format(datetime.utcnow().isoformat()))
-            sys.exit(0)
-        
-        self.dict_client_ip = dict_client_ip
-        self.logstash = logstash
-        return dict_client_ip, logstash
+            print( "|ERROR| download_configuration <dict_client_ip>=null")
+            print_json(self.dict_client_ip)
+            self.dict_client_ip = {}
+        #print_json(self.dict_client_ip)
+        return self.dict_client_ip, self.logstash
     
     def get_logstash_configuration(self, client_json):
         """
@@ -100,7 +88,8 @@ class reconfigurate_hearbeat():
             "output.logstash": {
                 "hosts": [
                     "{0}:{1}".format(logstash_configuration['ip_output_heartbeat'], logstash_configuration['port']['heartbeat'])
-                ]
+                ],
+                "worker": 8
             },
             "setup.template.settings": {
                 "index.codec": "best_compression",
@@ -110,18 +99,24 @@ class reconfigurate_hearbeat():
         #-----------------------------------hearbeat.monitors---------------------------------------------"
         list_of_ips = []
         for client in list_client_to_execute_heartbeat:
-            list_ip_by_one_client = self.dict_client_ip[client]
-            client_to_monitoring_json = {
-                "type": "icmp",
-                "timeout": "3s",
-                "schedule": "@every 30s"
-            }
-            client_to_monitoring_json.update( { "name": client } )
-            list_hosts = []
-            for ip_port in list_ip_by_one_client:
-                list_hosts.append( ip_port['ip'] )
-            client_to_monitoring_json.update( {"hosts":list_hosts} )
-            if(len(list_hosts)>0): list_of_ips.append( client_to_monitoring_json )
+            try:
+                list_ip_by_one_client = self.dict_client_ip[client]
+                client_to_monitoring_json = {
+                    "type": "icmp",
+                    "timeout": logstash_configuration['heartbeat']['timeout'],
+                    "schedule": logstash_configuration['heartbeat']['schedule']
+                }
+                client_to_monitoring_json.update( { "name": client } )
+                list_hosts = []
+                for ip_port in list_ip_by_one_client:
+                    list_hosts.append( ip_port['ip'] )
+                client_to_monitoring_json.update( {"hosts":list_hosts} )
+                if(len(list_hosts)>0): list_of_ips.append( client_to_monitoring_json )
+                print("|INFO | adding   {0}".format( client))
+            except:
+                print("|WARN |          {0}".format( client))
+                pass
+        
         heartbeat_json.update( {"heartbeat.monitors": list_of_ips})
         #print_json(heartbeat_json)
         #-------------------------------------------------------------------------------------------------"
@@ -130,7 +125,7 @@ class reconfigurate_hearbeat():
         print("INFO | {0} reconfigurate_heartbeat | Created <heartbeat.yml>".format(datetime.utcnow().isoformat()))
         return 
     
-    def relaunch_service(self,mode="production"):
+    def relaunch_service(self,mode="production"): #mode={"production" , "debug"}
         os.system("cd")
         os.system("{0} stop".format(self.service_bin))
         time.sleep(2)
@@ -141,14 +136,9 @@ class reconfigurate_hearbeat():
             print("INFO | {0} reconfigurate_heartbeat | Restarting service heartbeat.".format(datetime.utcnow().isoformat()))
             os.system("{0} restart".format(self.service_bin))
         
-
-    def run_mode_debug(self):
-        
-        os.system("cd")
-        
 if __name__ == "__main__":
     hearbeat = reconfigurate_hearbeat()
-    hearbeat.download_configuracion('supra')
+    hearbeat.download_configuracion(CLIENTE)
     hearbeat.build_yml()
     hearbeat.relaunch_service(mode="production")
 

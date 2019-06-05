@@ -2,7 +2,7 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 30/11/2018
-# Last update: 13/05/2019
+# Last update: 05/06/2019
 # Description: Codigo util, para uso general
 # sys.setdefaultencoding('utf-8') #reload(sys)
 # hash- > hashlib https://recursospython.com/guias-y-manuales/hashlib-md5-sha/
@@ -356,6 +356,12 @@ def build_table_json(list_name_keys, list_data_json):
             cont += 1
     return table_json
 ###############################################################################
+def bucket_to_dictionary(bucket_json, key="key",value="buckets"):
+    dictionary = {}
+    for one_element in bucket_json:
+        dictionary.update ( {one_element[key]: one_element[value]})
+    return dictionary
+
 def convert_data(data_to_convert,strc_dict):
     data_converted = {}
     try:

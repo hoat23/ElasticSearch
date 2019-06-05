@@ -2,7 +2,7 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 19/11/2018
-# Last update: 19/05/2019
+# Last update: 05/05/2019
 # Description: Server to conect Streak - Webhoook
 # Notes: Elastic only support binary data encoded in base64.
 # Link: https://ogma-dev.github.io/posts/simple-flask-webhook/
@@ -73,7 +73,7 @@ class elasticsearch():
         if not( (rpt.status_code)==200 or (rpt.status_code)==201 ):
             print("[PUT]:"+str(rpt.status_code)+" | "+ str(rpt.reason) )
         
-        return
+        return rpt.json()
     
     def req_post(self, URL_API, data,timeout=None):
         if (URL_API==None): URL_API = self.url_elk
@@ -85,12 +85,12 @@ class elasticsearch():
         if not( (rpt.status_code)==200 or (rpt.status_code)==201 ):
             print("[POST]:"+str(rpt.status_code)+" | "+ str(rpt.reason) )
         
-        return
+        return rpt.json()
 
     def req_del(self, URL_API,timeout=None):
         rpt = requests.delete( url=URL_API , auth=(self.user,self.pas), timeout=None)
         print("[DEL]:"+str(rpt.status_code)+" | "+ str(rpt.reason) )
-        return
+        return rpt.json()
 
     def get_num_element(self, INDEX="" , TYPE=""):
         if( len(INDEX)>0 ): INDEX ="/"+INDEX

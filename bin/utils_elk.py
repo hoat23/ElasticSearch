@@ -1,12 +1,13 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 30/05/2019
+# Last update: 31/05/2019
 # Description: Procesar las alertas generadas & otras utilerias
 #######################################################################################
 import argparse, sys
 from datetime import datetime
 from elastic import *
+from utils import *
 #######################################################################################
 def bytesELK2json(data,codification='utf-8'):
     d_dict = {}
@@ -18,49 +19,183 @@ def bytesELK2json(data,codification='utf-8'):
        d_str = d_str.replace("null","None")
        d_dict = eval(d_str)
     except:
-       print("[ERROR] type = %s ".format( type(data) ))
+       print("[ERROR] type = {0} ".format( type(data) ))
     finally:
        return d_dict
 #######################################################################################
-def download_cmdb_elk(elk=None, q_filter = {}, nameFile = "cmdb_elk.yml", coding='utf-8'):
-    list_datos = ["ip","cliente","sede","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo"]
-    array_filter = [ {"exists": {"field": "ip"}} ]
-    
-    if elk==None: elk=elasticsearch()
-    if q_filter!={} : array_filter.append(q_filter)
-    data_query = { #GET supra_data/_search
-        "size": 1000,
-        "_source": list_datos,
-        "query": {
-            "bool": {
-            "must": array_filter
+def build_json_cmdb_elk(data_json):
+    bucket_list = []
+    for clientes in data_json['aggregations']['cliente']['buckets']:
+        cliente =  clientes['key']
+        list_datos_by_client = []
+        for ip_s in clientes['groupIP']['buckets']:
+            ip = ip_s['key']
+            to_monitoring = []
+            protocolos_json = {}
+            list_protocolos = []
+            for protocolos in ip_s['groupProtocolo']['buckets']:
+                protocolo = protocolos['key']
+                if len(protocolo)==0 or protocolo==None: 
+                    print("[WARN ] build_json_cmdb_elk | ERROR <field:protocolo>[ ip:{0:16s} client:{2:20s} protocolo: {1}]".format(ip, protocolo, cliente))
+                    protocolo="ping"
+                list_protocolos.append(protocolo)
+                list_puertos = []
+                for puertos in protocolos['groupPort']['buckets']:
+                    puerto = puertos['key']
+                    dif_fields = puertos['tops']['hits']['hits'][0]['_source']
+                    if (len(puerto)<=0): puerto = "default"
+                    list_puertos.append( { 'value' : puerto, "cmdb" : dif_fields})
+                if (len(list_puertos)>0):
+                    protocolos_json.update( { protocolo: list_puertos } )
+                to_monitoring.append( protocolo )
+            #print(" [{0:25s}] \t {1:15s} {2}".format(cliente, ip, ",".join(list_protocolos)))
+            data_by_device = {
+                "ip": ip,
+                "protocolo": protocolos_json,
+                "to_monitoring": to_monitoring
             }
+            list_datos_by_client.append(data_by_device)
+        bucket_list.append({"key": cliente, "buckets": list_datos_by_client})
+    
+    return bucket_list
+#######################################################################################
+def build_query_monitoring_by_client(client ,elk=elasticsearch(), index="supra_data", list_dif_fields=[], add_on_doc_in_groupIP=False, list_common_fields=["cliente","sede","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo"]):
+    ip_priv = {
+    "bool": {
+        "should": [
+            {"range": {"ip": {"gte": "192.168.0.0","lte": "192.168.255.255"}}},
+            {"range": {"ip": {"gte": "172.16.0.0","lte": "172.31.255.255"}}},
+            {"range": {"ip": {"gte": "10.0.0.0","lte": "10.255.255.255"}}}]}
+    }
+    data_query = {#GET supra_data/_search
+    "size": 0,
+    "query": {
+        "bool": {
+            "must": [],
+            "must_not": []
         }
     }
-    URL_API = "{0}/supra_data/_search".format(elk.get_url_elk())
-    data_response = elk.req_get(URL_API, data = data_query)
-    if len(data_response)<0:
-        print("ERROR | {0} download_cmdb_elk | Failed to download data from elasticsearch.".format(datetime.utcnow().isoformat()))
-    #print_json(data_response)
-    array_data = getelementfromjson(data_response, "hits.[hits]._source")
+    }
+    data_aggs={
+        "aggs": {
+        "cliente": {"terms": {"field": "cliente","size": 1000},
+            "aggs": {
+                "groupIP": {"terms": {"field": "ip","size": 1000},
+                "aggs": {
+                    "groupProtocolo": {"terms": {"field": "protocolo","size": 1000
+                    },
+                    "aggs": {
+                        "groupPort": {"terms": {"field": "puerto","size": 1000
+                        },
+                        "aggs": {
+                            "tops": {"top_hits": {"size": 1,"sort": [{"@timestamp": {"order": "desc"}}] }
+                            }
+                        }
+                        }
+                    }
+                    }
+                }
+                }
+            }
+        }
+    }}
+
+    if len(list_dif_fields)>0:
+        data_aggs["aggs"]["cliente"]["aggs"]["groupIP"]["aggs"]["groupProtocolo"]["aggs"]["groupPort"]["aggs"]["tops"]["top_hits"].update( {"_source": list_dif_fields })
     
+    if add_on_doc_in_groupIP:
+        aux_query = {
+            "one_doc": {
+                "top_hits": {
+                    "size": 1,
+                    "sort": [{"@timestamp": {"order": "desc"}}],
+                    "_source": list_common_fields
+                }
+            }
+        }
+        data_aggs["aggs"]["cliente"]["aggs"]["groupIP"]["aggs"].update( aux_query )
+    #filter by client
+    if (client=="AWS"): 
+        ip_private = False
+    else: 
+        data_query['query']['bool']['must'].append( {"match": {"cliente": client}} )
+        ip_private = True
+    
+    #filter by exists fields
+    data_query['query']['bool']['must'].append( {"exists": {"field":"ip"}} )
+    data_query['query']['bool']['must'].append( {"exists": {"field":"protocolo"}} )
+    #filter by private ip
+    if (ip_private):
+        data_query['query']['bool']['must'].append( ip_priv )
+    else:
+        data_query['query']['bool']['must_not'].append( ip_priv )
+    data_query.update( data_aggs)
+    return data_query
+#######################################################################################
+def update_dict_monitoring_by_client(client ,elk=elasticsearch(), index="supra_data", list_dif_fields=["tipo_ip_equipo","ip_group"]):
+    data_query = build_query_monitoring_by_client(client, elk=elk, index=index, list_dif_fields=list_dif_fields)
+    #Doing the query to elk.
+    URL_API = "{0}/{1}/_search".format(elk.get_url_elk(), index)
+    rpt_json = elk.req_get(URL_API, data=data_query)
+    data_procesed = build_json_cmdb_elk(rpt_json)
+    #save_yml(data_procesed,"cmdb_testing.yml")
+
+    index_config = "index_configuration"
+    doc_id = "dict_monitoring_"+client.lower().replace(" ","_")
+    rpt_json = elk.req_get("{0}/{1}/_doc/{2}".format(elk.get_url_elk(), index_config, doc_id))
+    data_to_update = { 
+        "key": "dict_"+client.lower(), 
+        "buckets": data_procesed, 
+        "last_update": "{0}".format( datetime.utcnow().isoformat()) 
+        } 
+    URL_FULLPATH = "{0}/{1}/_doc/{2}".format(elk.get_url_elk(), index_config, doc_id)
+    if "found" in rpt_json:
+        if rpt_json['found']=="false": 
+            URL_FULLPATH = "{0}/{1}/_update/{2}?pretty".format(elk.get_url_elk(), index_config, doc_id)
+    print("[INFO] update_dict_monitoring_by_client [{0}|_doc|{1}]".format(index_config, doc_id))
+    print(URL_FULLPATH)
+    rpt_json = elk.req_post(URL_FULLPATH, data=data_to_update )
+    if "status" in rpt_json:
+        if rpt_json["status"]==400:
+            #print_json(data_to_update)
+            print_json(rpt_json)
+            #save_yml(data_to_update, nameFile="debug.yml")
+    return 
+#######################################################################################
+def download_cmdb_elk(client,elk=None, index="supra_data", nameFile = "cmdb_elk.yml", coding='utf-8'):
+    build_query_monitoring_by_client("AWS")
+    array_data = []
+    list_common_fields =["cliente","sede","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo"]
+    if elk==None: elk = elasticsearch()
+    URL_API = "{0}/{1}/_search".format(elk.get_url_elk(), index)
+    data_query = build_query_monitoring_by_client(client, elk=elk, index=index, list_dif_fields=["tipo_ip_equipo","ip_group"], add_on_doc_in_groupIP=True, list_common_fields=list_common_fields)
+    data_json = elk.req_get( URL_API, data=data_query )
     fnew  = open(nameFile,"wb")
-    for data_json in array_data:
-        line = "\"{0}\"".format( data_json[list_datos[0]] )
-        for i in range(1,len(list_datos)):
-            field = list_datos[i]
-            try:
-                value = data_json[field]
-            except:
-                value = "*"
-            finally:
-                if i==1:
-                    line = "{0} : \"{1}".format ( line, value )
-                else:
-                    line = "{0};{1}".format ( line, value )
-        line = line+"\"\n"
-        fnew.write(line.encode(coding))
+    for clientes in data_json['aggregations']['cliente']['buckets']:
+        cliente =  clientes['key']
+        list_datos_by_ip = []
+        for ip_s in clientes['groupIP']['buckets']:
+            ip = ip_s['key']
+            #print_json(data_response)
+            #common_fields = getelementfromjson(ip_s, "one_doc.hits.[hits]._source")
+            common_fields = ip_s['one_doc']['hits']['hits'][0]["_source"]
+            #save_yml(ip, nameFile="debug.yml")
+            list_fields = []
+            for field in list_common_fields:
+                try:
+                    value = common_fields[field]
+                    if value==None: value = "*"
+                except:
+                    value = "*"
+                finally:
+                    list_fields.append(value)
+            if len(list_fields)>0:
+                str_fields = ",".join(list_fields)
+                line = " {0:23s} : \"{1}\"\n".format(ip, str_fields) 
+                fnew.write(line.encode(coding))
     fnew.close()
+    
+    #save_yml(data_json, nameFile = "debug.yml")
     return array_data
 #######################################################################################
 def download_configuration_from_elk(elk):
@@ -70,7 +205,6 @@ def download_configuration_from_elk(elk):
         "query": {
             "bool": {
                 "must": [
-                    {"exists": {"field": "dict_client_ip"}},
                     {"exists": {"field": "logstash"}}
                 ]
             }
@@ -80,18 +214,13 @@ def download_configuration_from_elk(elk):
     data_response = elk.req_get(elk.get_url_elk()+"/index_configuration/_search?filter_path=hits.hits._source",data=data_query)['hits']['hits'][0]['_source']
     if len(data_response)<0:
         print("ERROR | {0} download_configuration | Failed to download data from elasticsearch.".format(datetime.utcnow().isoformat()))
-    
-    if 'dict_client_ip' in data_response: 
-        dict_client_ip =  data_response['dict_client_ip']
-    else:
-        print("ERROR | {0} download_configuration | 'dict_client_ip' key don't exists in json response.".format(datetime.utcnow().isoformat()))
-    
+
     if 'logstash' in data_response:
         logstash = data_response['logstash']
     else:
         print("ERROR | {0} download_configuration | 'logstash' key don't exists in json response.".format(datetime.utcnow().isoformat()))
     
-    return dict_client_ip, logstash
+    return logstash
 #######################################################################################
 def download_watchers(elk=None):
     data_query = { #GET supra_data/_search
@@ -134,6 +263,21 @@ def get_incidencia(incidencia_type):
         if data_json["_source"]["incidencia_type"] == incidencia_type:
             return data_json["_source"]
     return {}
+#######################################################################################
+def get_list_clientes(elk =elasticsearch(), index="supra_data"):
+    data_query = {
+        "size": 0, 
+        "query": {
+            "bool": {"must": [{"exists": {"field": "cliente"}}]}
+        },
+        "aggs": {
+            "cliente": {"terms": {"field": "cliente","size": 1000}}
+        }
+    }
+    URL_FULLPATH = "{0}/{1}/_search".format( elk.get_url_elk() , index )
+    rpt_json = elk.req_get( URL_FULLPATH, data = data_query )
+    list_clients = getelementfromjson(rpt_json,"aggregations.cliente.[buckets].key")
+    return list_clients
 #######################################################################################
 def flush_index(name_index):
     #Limpia la data de un index sin eliminar el indice
@@ -436,10 +580,41 @@ def get_list_watches(filter={"match_all": {}}, elk=elasticsearch()):
     print_list(list_watches , num=1)
     return list_watches
 #######################################################################################
+def get_one_field_in_document(index="index_configuration",one_field="dict_client_ip", elk= elasticsearch()):
+    #Using only one exists a field only in one doc
+    data_query = {
+        "query": {
+            "bool": {
+                "must": [{"exists": {"field": one_field}}]
+            }
+        },
+        "size": 1
+    }
+    URL_API = "{0}/{1}/_search".format(elk.get_url_elk(), index )
+    rpt_json = elk.req_get(URL_API, data=data_query)
+    print_json(rpt_json)
+    return rpt_json
+def update_fields_in_document(index="index_configuration",one_field="dict_client_ip", elk=elasticsearch()):
+    """
+    POST {index}/_update_by_query?refresh
+    {
+        "script": {
+            "inline": "
+            ctx._source['type_device'] = 'firewall';
+            ctx._source['client'] = 'tasa';
+            "
+        }
+    }
+    """
+    rpt_bool = False
+    list_docs = get_one_field_in_document(index, one_field, elk)
+    print_json(list_docs)
+    return rpt_bool
+#######################################################################################
 def get_parametersCMD():
     command = value = client = None
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c","--command",help="Comando a ejecutar en la terminal [update, get_list_idx, download_watches ]")
+    parser.add_argument("-c","--command",help="Comando a ejecutar en la terminal [update, get_list_idx, download_watches, update_dict_monitoring ]")
     parser.add_argument("-v","--value",help="Comando a ejecutar en la terminal [nameFile.jml ]")
     parser.add_argument("-f","--client",help="Commando para filtar por cliente [ ]")
     args = parser.parse_args()
@@ -451,25 +626,25 @@ def get_parametersCMD():
         print("ERROR: Faltan parametros.")
         print("command\t [{0}]".format(command))
         sys.exit(0)
-    if command=="update" and value!=None:
-        print("INFO  | update {0}".format(value))
-        if client !=None :
-            q_filter = {"match": {"cliente": client}}
-        else:
-            q_filter = {}
-        download_cmdb_elk(nameFile=value,q_filter=q_filter)
+    if command=="download_cmdb_elk" and client!=None:
+        print("INFO  | cmdb_elk [{0}]".format(client))
+        download_cmdb_elk(client)
     elif command=="get_list_idx" and value!=None:
         get_list_index(value) #value=".*"
     elif command=="download_watches":
         download_watches(nameFile=value)
     elif command=="download_incidencias":
         download_incidencias()
+    elif command=="update_dict_monitoring" and client!=None:
+        update_dict_monitoring_by_client(client)    
     else:
         print("ERROR | No se ejecuto ninguna accion.")
     return
 #######################################################################################
 if __name__ == "__main__":
     print("[INI] utils_elk.py")
+    #update_dict_monitoring_by_client("PROMPERU")
+    #update_fields_in_document()
     get_parametersCMD()
     #block_write_index("syslog-alianza-write", write_block=True)
     #get_resume_status_nodes()
