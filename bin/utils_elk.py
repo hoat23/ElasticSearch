@@ -133,6 +133,7 @@ def build_query_monitoring_by_client(client ,elk=elasticsearch(), index="supra_d
     return data_query
 #######################################################################################
 def update_dict_monitoring_by_client(client ,elk=elasticsearch(), index="supra_data", list_dif_fields=["tipo_ip_equipo","ip_group"]):
+    print("update_dict_monitoring_by_client")
     data_query = build_query_monitoring_by_client(client, elk=elk, index=index, list_dif_fields=list_dif_fields)
     #Doing the query to elk.
     URL_API = "{0}/{1}/_search".format(elk.get_url_elk(), index)
@@ -290,53 +291,6 @@ def block_write_index(name_index, write_block=False):
     elk.req_put(URL_FULLPATH, data={"index.blocks.write":write_block})
     return
 #######################################################################################
-def get_list_index(names_index,filter_idx_sys=True, show_properties="settings.index.blocks.write"):
-    elk = elasticsearch()
-    URL_FULLPATH = "{0}/{1}/_settings".format( elk.get_url_elk() , names_index)
-    if names_index.find(".")==0: filter_idx_sys=False
-    rpt_json = elk.req_get(URL_FULLPATH)
-    list_idx = []
-    print_json(rpt_json)
-    for key in rpt_json:
-        if key.find(".")!=0 and  filter_idx_sys:
-            list_idx.append(key)
-        if not filter_idx_sys:
-            list_idx.append(key)
-    print_list(list_idx, num=1)
-#######################################################################################
-"""
-#######################################################################################
-def download_and_update_dictionary_cmdb(elk=None):
-    if elk==None: elk = elasticsearch()
-    dict_cmdb_ip = {}
-    logstash = {}
-    data_query = { #GET index_configuration/_search?filter_path=hits.hits._source.logstash
-        "query": {
-            "bool": {
-                "must": [
-                    {"exists": {"field": "dict_client_ip"}},
-                    {"exists": {"field": "logstash"}}
-                ]
-            }
-        }
-    }
-    
-    data_response = elk.req_get(elk.get_url_elk()+"/index_configuration/_search?filter_path=hits.hits._source",data=data_query)['hits']['hits'][0]['_source']
-    if len(data_response)<0:
-        print("ERROR | {0} download_configuration | Failed to download data from elasticsearch.".format(datetime.utcnow().isoformat()))
-    
-    if 'dict_client_ip' in data_response: 
-        dict_client_ip =  data_response['dict_client_ip']
-    else:
-        print("ERROR | {0} download_configuration | 'dict_client_ip' key don't exists in json response.".format(datetime.utcnow().isoformat()))
-    
-    if 'logstash' in data_response:
-        logstash = data_response['logstash']
-    else:
-        print("ERROR | {0} download_configuration | 'logstash' key don't exists in json response.".format(datetime.utcnow().isoformat()))
-    
-    return dict_client_ip, logstash
-    
 def get_list_index(names_index, filter_idx_sys=True, path = None, show_null_values=False):
     elk = elasticsearch()
     if names_index.find(".")==0: filter_idx_sys=False
@@ -372,7 +326,22 @@ def get_list_index(names_index, filter_idx_sys=True, path = None, show_null_valu
     #print_json(list_elements)
     return list_elements
 #######################################################################################
-def get_index_by_allocation(names_index, filter_idx_sys=True, path="*.settings.index.routing.allocation.include.instance_configuration"):
+def get_simple_list_index(names_index,filter_idx_sys=True, show_properties="settings.index.blocks.write"):
+    elk = elasticsearch()
+    URL_FULLPATH = "{0}/{1}/_settings".format( elk.get_url_elk() , names_index)
+    if names_index.find(".")==0: filter_idx_sys=False
+    rpt_json = elk.req_get(URL_FULLPATH)
+    list_idx = []
+    #print_json(rpt_json)
+    for key in rpt_json:
+        if key.find(".")!=0 and  filter_idx_sys:
+            list_idx.append(key)
+        if not filter_idx_sys:
+            list_idx.append(key)
+    return list_idx
+#######################################################################################
+def get_index_by_allocation(names_index, filter_by_allocation=None ,filter_idx_sys=True, path="*.settings.index.routing.allocation.include.instance_configuration"):
+    # filter_by_allocation = "hot" or "warm"
     list_index = get_list_index(names_index, filter_idx_sys=filter_idx_sys, path=path, show_null_values=True)
     list_index_hot = []
     list_index_warm = []
@@ -393,11 +362,13 @@ def get_index_by_allocation(names_index, filter_idx_sys=True, path="*.settings.i
         'hot': getelementfromjson( {"array": list_index_hot}, "[array].key"),
         'warm': getelementfromjson( {"array": list_index_warm}, "[array].key")
     }
-    print_json(data_json)
+    if filter_by_allocation!=None or filter_by_allocation=="hot" or filter_by_allocation=="warm":
+        data_json =  data_json[filter_by_allocation]
+    #print_json( data_json )
     return data_json
-"""
 #######################################################################################
-def get_resume_status_nodes():
+def get_resume_space_nodes(filter_type_node = None):
+    #filter_type_node = {"hot", "warm", "hot-warm"}
     elk = elasticsearch()
     URL_FULLPATH = "{0}/_nodes/stats".format( elk.get_url_elk() )
     rpt_json = elk.req_get(URL_FULLPATH)
@@ -405,10 +376,31 @@ def get_resume_status_nodes():
     #save_yml(rpt_json,nameFile="nodes_elk.yml")
     list_nodes = []
     path = "nodes.*.{attributes.instance_configuration,fs.total.{free_in_bytes,total_in_bytes}}"
+    buckets_nodes = []
+    for node_id in rpt_json['nodes']:
+        list_nodes.append(node_id)
+    for node_id in list_nodes:
+        node_name = rpt_json['nodes'][node_id]["attributes"]["instance_configuration"]
+        data = rpt_json['nodes'][node_id]["fs"]["total"]
+        free_in_percentage = 100 * data['free_in_bytes'] / data['total_in_bytes']
+        data.update( {'node_name': node_name})
+        data.update( {'node_id': node_id} )
+        data.update( {'free_in_percentage': round (free_in_percentage , 2) } )
+        buckets_nodes.append(data)
     
-    for node in rpt_json['nodes']:
-        list_nodes.append(node)
-    print_list(list_nodes)
+    if filter_type_node!=None:
+        dict_real_name = {"hot": "aws.data.highio.i3", "warm": "aws.data.highstorage.d2", "ml":"aws.ml.m5", "m":"aws.master.r4"}
+        list_key_filters =  filter_type_node.split("-")
+        list_key_filters = list(  map ( lambda x : dict_real_name[x],list_key_filters) )
+        rpt_data = []
+        for one_json in buckets_nodes:
+            for name_node in list_key_filters:
+                if name_node == one_json['node_name']:
+                    rpt_data.append(one_json)
+    else:
+        rpt_data = buckets_nodes
+    print_json(rpt_data)
+    
 #######################################################################################
 def enrich_data_from(list_keys,list_key_to_add,dictionary):
     return {}
@@ -612,16 +604,18 @@ def update_fields_in_document(index="index_configuration",one_field="dict_client
     return rpt_bool
 #######################################################################################
 def get_parametersCMD():
-    command = value = client = None
+    command = value = client = index = None
     parser = argparse.ArgumentParser()
     parser.add_argument("-c","--command",help="Comando a ejecutar en la terminal [update, get_list_idx, download_watches, update_dict_monitoring ]")
     parser.add_argument("-v","--value",help="Comando a ejecutar en la terminal [nameFile.jml ]")
-    parser.add_argument("-f","--client",help="Commando para filtar por cliente [ ]")
+    parser.add_argument("-f","--client",help="Commando para filtar por cliente o indice(hot-warm) [ ]")
+    parser.add_argument("-i","--index",help="Commando para especificar el indice (soporta wildcards)")
     args = parser.parse_args()
 
     if args.command: command = str(args.command)
     if args.value: value = str(args.value) 
     if args.client: client = str(args.client) 
+    if args.index: index = str(args.index)
     if( command==None):
         print("ERROR: Faltan parametros.")
         print("command\t [{0}]".format(command))
@@ -629,14 +623,26 @@ def get_parametersCMD():
     if command=="download_cmdb_elk" and client!=None:
         print("INFO  | cmdb_elk [{0}]".format(client))
         download_cmdb_elk(client)
-    elif command=="get_list_idx" and value!=None:
-        get_list_index(value) #value=".*"
+    elif command=="get_list_idx" or value!=None and index!=None:
+        #python utils_elk.py -c get_list_idx -v hot-warm --index *group*
+        if value == "hot-warm" or value == "hot" or value == "warm" or value =="h-w":
+            if value == "hot-warm" or value == "h-w": value = None
+            data_json = get_index_by_allocation(index,filter_by_allocation=value)
+            print_json(data_json)
+        else:
+            #python utils_elk.py -c get_list_idx --index .*
+            list_idx = get_simple_list_index(index) # value=".*" (buscar indices usando wildcards)
+            print_list(list_idx, num=1)
     elif command=="download_watches":
         download_watches(nameFile=value)
     elif command=="download_incidencias":
         download_incidencias()
     elif command=="update_dict_monitoring" and client!=None:
-        update_dict_monitoring_by_client(client)    
+        update_dict_monitoring_by_client(client)
+    elif command=="get_resume_space_nodes":
+        #python utils_elk.py -c get_resume_space_nodes -v hot-warm
+        if value != "hot-warm" and value != "hot" and value != "warm": value = None
+        get_resume_space_nodes(filter_type_node=value)    
     else:
         print("ERROR | No se ejecuto ninguna accion.")
     return
@@ -647,11 +653,11 @@ if __name__ == "__main__":
     #update_fields_in_document()
     get_parametersCMD()
     #block_write_index("syslog-alianza-write", write_block=True)
-    #get_resume_status_nodes()
-    #get_list_index("*-write")
+    #get_resume_space_nodes()
+    #get_simple_list_index("*-write")
     #get_list_watches()
     #download_watches()
-    #get_list_index("*-group*")
+    #get_simple_list_index("*-group*")
     #download_incidencias()
     #get_incidencia("network_device_status")
     pass
