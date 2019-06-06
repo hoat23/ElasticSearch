@@ -165,12 +165,12 @@ def update_dict_monitoring_by_client(client ,elk=elasticsearch(), index="supra_d
     return 
 #######################################################################################
 def download_cmdb_elk(client,elk=None, index="supra_data", nameFile = "cmdb_elk.yml", coding='utf-8'):
-    build_query_monitoring_by_client("AWS")
     array_data = []
     list_common_fields =["cliente","sede","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo"]
     if elk==None: elk = elasticsearch()
     URL_API = "{0}/{1}/_search".format(elk.get_url_elk(), index)
-    data_query = build_query_monitoring_by_client(client, elk=elk, index=index, list_dif_fields=["tipo_ip_equipo","ip_group"], add_on_doc_in_groupIP=True, list_common_fields=list_common_fields)
+    if(client!="AWS"): all_ips=True
+    data_query = build_query_monitoring_by_client(client, all_ips=all_ips, elk=elk, index=index, list_dif_fields=["tipo_ip_equipo","ip_group"], add_on_doc_in_groupIP=True, list_common_fields=list_common_fields)
     data_json = elk.req_get( URL_API, data=data_query )
     fnew  = open(nameFile,"wb")
     for clientes in data_json['aggregations']['cliente']['buckets']:
