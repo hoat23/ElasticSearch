@@ -59,7 +59,7 @@ def build_json_cmdb_elk(data_json):
     
     return bucket_list
 #######################################################################################
-def build_query_monitoring_by_client(client ,elk=elasticsearch(), index="supra_data", list_dif_fields=[], add_on_doc_in_groupIP=False, list_common_fields=["cliente","sede","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo"]):
+def build_query_monitoring_by_client(client,all_ips=False,elk=elasticsearch(), index="supra_data", list_dif_fields=[], add_on_doc_in_groupIP=False, list_common_fields=["cliente","sede","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo"]):
     ip_priv = {
     "bool": {
         "should": [
@@ -125,10 +125,11 @@ def build_query_monitoring_by_client(client ,elk=elasticsearch(), index="supra_d
     data_query['query']['bool']['must'].append( {"exists": {"field":"ip"}} )
     data_query['query']['bool']['must'].append( {"exists": {"field":"protocolo"}} )
     #filter by private ip
-    if (ip_private):
-        data_query['query']['bool']['must'].append( ip_priv )
-    else:
-        data_query['query']['bool']['must_not'].append( ip_priv )
+    if all_ips==False:
+        if (ip_private):
+            data_query['query']['bool']['must'].append( ip_priv )
+        else:
+            data_query['query']['bool']['must_not'].append( ip_priv )
     data_query.update( data_aggs)
     return data_query
 #######################################################################################
@@ -399,8 +400,8 @@ def get_resume_space_nodes(filter_type_node = None):
                     rpt_data.append(one_json)
     else:
         rpt_data = buckets_nodes
-    print_json(rpt_data)
-    
+    #print_json(rpt_data)
+    return rpt_data
 #######################################################################################
 def enrich_data_from(list_keys,list_key_to_add,dictionary):
     return {}
@@ -621,6 +622,7 @@ def get_parametersCMD():
         print("command\t [{0}]".format(command))
         sys.exit(0)
     if command=="download_cmdb_elk" and client!=None:
+        #python utils_elk.py -c download_cmdb_elk -f TASA
         print("INFO  | cmdb_elk [{0}]".format(client))
         download_cmdb_elk(client)
     elif command=="get_list_idx" or value!=None and index!=None:
@@ -642,14 +644,15 @@ def get_parametersCMD():
     elif command=="get_resume_space_nodes":
         #python utils_elk.py -c get_resume_space_nodes -v hot-warm
         if value != "hot-warm" and value != "hot" and value != "warm": value = None
-        get_resume_space_nodes(filter_type_node=value)    
+        list_resume_nodes = get_resume_space_nodes(filter_type_node=value)    
+        print_json(list_resume_nodes)
     else:
         print("ERROR | No se ejecuto ninguna accion.")
     return
 #######################################################################################
 if __name__ == "__main__":
     print("[INI] utils_elk.py")
-    #update_dict_monitoring_by_client("PROMPERU")
+    #update_dict_monitoring_by_client("TASA")
     #update_fields_in_document()
     get_parametersCMD()
     #block_write_index("syslog-alianza-write", write_block=True)
