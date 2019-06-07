@@ -169,7 +169,10 @@ def download_cmdb_elk(client,elk=None, index="supra_data", nameFile = "cmdb_elk.
     list_common_fields =["cliente","sede","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo"]
     if elk==None: elk = elasticsearch()
     URL_API = "{0}/{1}/_search".format(elk.get_url_elk(), index)
-    if(client!="AWS"): all_ips=True
+    if(client!="AWS"): 
+        all_ips=True
+    else:
+        all_ips=False
     data_query = build_query_monitoring_by_client(client, all_ips=all_ips, elk=elk, index=index, list_dif_fields=["tipo_ip_equipo","ip_group"], add_on_doc_in_groupIP=True, list_common_fields=list_common_fields)
     data_json = elk.req_get( URL_API, data=data_query )
     fnew  = open(nameFile,"wb")
@@ -387,6 +390,7 @@ def get_resume_space_nodes(filter_type_node = None):
         data.update( {'node_name': node_name})
         data.update( {'node_id': node_id} )
         data.update( {'free_in_percentage': round (free_in_percentage , 2) } )
+        data.update( {'usage_in_percentage': round (100.0-free_in_percentage , 2) } )
         buckets_nodes.append(data)
     
     if filter_type_node!=None:
@@ -646,13 +650,16 @@ def get_parametersCMD():
         if value != "hot-warm" and value != "hot" and value != "warm": value = None
         list_resume_nodes = get_resume_space_nodes(filter_type_node=value)    
         print_json(list_resume_nodes)
+    elif command=="get_list_client":
+        list_client = get_list_clientes()
+        print_list(list_client, num=1)
     else:
         print("ERROR | No se ejecuto ninguna accion.")
     return
 #######################################################################################
 if __name__ == "__main__":
     print("[INI] utils_elk.py")
-    #update_dict_monitoring_by_client("TASA")
+    #update_dict_monitoring_by_client("PROMPERU")
     #update_fields_in_document()
     get_parametersCMD()
     #block_write_index("syslog-alianza-write", write_block=True)
