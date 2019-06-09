@@ -1,7 +1,7 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 07/06/2019
+# Last update: 09/06/2019
 # Description: Procesar las alertas generadas & otras utilerias
 #######################################################################################
 import argparse, sys
@@ -115,7 +115,7 @@ def police_index_in_hot(types_of_index=[], num_idx_in_hot=1):
         list_idx_warm = settings_on_idx['warm']
         flagExecuteHot = execute_migration_nodes(list_idx_hot,"hot")
         flagExecuteWarm = execute_migration_nodes(list_idx_warm,"warm")
-        print("{3}|INFO |police_index_in_hot  |{2:23s}| flagExecuteHot={1} flagExecuteWarm={0}".format(flagExecuteWarm, flagExecuteHot , idx_type, datetime.utcnow().isoformat()))
+        print("{3}|INFO |police_index_in_hot  |{2:23s}| flagExecuteHot={1:5s} flagExecuteWarm={0:5s}".format(flagExecuteWarm, flagExecuteHot , idx_type, datetime.utcnow().isoformat()))
     #print_json(dict_idx_hot_warm)
     return flagExecute
 #######################################################################################
