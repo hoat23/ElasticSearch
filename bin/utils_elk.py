@@ -330,7 +330,7 @@ def get_list_index(names_index, filter_idx_sys=True, path = None, show_null_valu
     #print_json(list_elements)
     return list_elements
 #######################################################################################
-def get_simple_list_index(names_index,filter_idx_sys=True, show_properties="settings.index.blocks.write"):
+def get_simple_list_index(names_index,filter_idx_sys=True, show_properties="settings.index.blocks.write", sort_reverse=False):
     elk = elasticsearch()
     URL_FULLPATH = "{0}/{1}/_settings".format( elk.get_url_elk() , names_index)
     if names_index.find(".")==0: filter_idx_sys=False
@@ -342,6 +342,7 @@ def get_simple_list_index(names_index,filter_idx_sys=True, show_properties="sett
             list_idx.append(key)
         if not filter_idx_sys:
             list_idx.append(key)
+    list_idx=sorted(list_idx, reverse=sort_reverse)
     return list_idx
 #######################################################################################
 def get_index_by_allocation(names_index, filter_by_allocation=None ,filter_idx_sys=True, path="*.settings.index.routing.allocation.include.instance_configuration"):

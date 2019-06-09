@@ -62,6 +62,7 @@ def execute_index_write_in_hot(index="*-write"):
 def execute_migration_nodes(list_index, to_node=""):
     flagExecuted=False
     #PUT *-group*-write/_settings
+    if len(list_index)==0: return False
     elk = elasticsearch()
     rpt_json = {}
     try:
@@ -70,11 +71,53 @@ def execute_migration_nodes(list_index, to_node=""):
             URL_API = "{0}/{1}/_settings".format(elk.get_url_elk(), index )
             data_query = {"index.routing.allocation.include.instance_configuration": real_node_name}
             rpt_json = elk.req_put( URL_API, data=data_query )
+            flagExecuted = True
     except:
+        print("{2}|INFO |execute_migration_nodes      |{1} | flagExecute={0}".format(flagExecuted, list_index , datetime.utcnow().isoformat()))
         print_json(rpt_json)
     finally:
-        print_json(rpt_json)
+        #print_json(rpt_json)
         return flagExecuted
+#######################################################################################
+def order_idx_in_hot_warm(types_of_index=[], num_idx_in_hot=2):
+    # {type_of_index}-{groups_by_index}-000000
+    dict_idx = { }
+    for idx_type in types_of_index:
+        idx_pattern = "{0}*".format(idx_type)
+        list_idx = get_simple_list_index(idx_pattern, sort_reverse=True)
+        list_idx_hot = get_simple_list_index(idx_pattern + "-write")
+        list_idx.remove( list_idx_hot[0] )
+        dict_idx.update( 
+            {idx_type : {
+                "hot" : list_idx[:num_idx_in_hot],
+                "warm": list_idx[num_idx_in_hot:],
+                "write": list_idx_hot
+                }
+            })
+    #print_json(dict_idx)
+    return dict_idx
+#######################################################################################
+def police_index_in_hot(types_of_index=[], num_idx_in_hot=1):
+    flagExecute = True
+    types_of_index=[
+        "syslog-group01",
+        "syslog-group02",
+        "syslog-group03",
+        "syslog-group04",
+        "syslog-group05",
+        "heartbeat-group01",
+        "health-group01",
+        "snmp-group01"]
+    dict_idx_hot_warm = order_idx_in_hot_warm(types_of_index=types_of_index, num_idx_in_hot=num_idx_in_hot)
+    for idx_type in  types_of_index:
+        settings_on_idx = dict_idx_hot_warm[idx_type]
+        list_idx_hot = settings_on_idx['hot']
+        list_idx_warm = settings_on_idx['warm']
+        flagExecuteHot = execute_migration_nodes(list_idx_hot,"hot")
+        flagExecuteWarm = execute_migration_nodes(list_idx_warm,"warm")
+        print("{3}|INFO |police_index_in_hot  |{2:23s}| flagExecuteHot={1} flagExecuteWarm={0}".format(flagExecuteWarm, flagExecuteHot , idx_type, datetime.utcnow().isoformat()))
+    #print_json(dict_idx_hot_warm)
+    return flagExecute
 #######################################################################################
 def police_space_over_percentage_by_node(value_usage_disk, type_node, flagExecute = False):
     lista_data_nodes = get_resume_space_nodes(filter_type_node=type_node)
@@ -110,6 +153,9 @@ def get_parametersCMD_curator_elk():
     elif command=="exe_idx_write_in_hot" and index!=None: # index=*group*-write 
         #python curator_elk.py -c exe_idx_write_in_hot --index *group*-write
         execute_index_write_in_hot(index=index)
+    elif command=="exe_policy_idx_in_hot_warm":
+        #python curator_elk.py -c exe_policy_idx_in_hot_warm
+        police_index_in_hot()
     elif command=="exe_read_only" and index!=None:
         #python curator_elk.py -c exe_read_only --index syslog-group05-000001
         if value!=None:
@@ -125,6 +171,7 @@ def get_parametersCMD_curator_elk():
 #######################################################################################
 if __name__ == "__main__":
     get_parametersCMD_curator_elk()
+    #police_index_in_hot()
     #police_space_over_percentage_by_node(75.0,"hot")
     #police_space_over_percentage_by_node(75.0,"warm")
     #list_idx = [    "syslog-group01-000027", "syslog-group01-000028"]
