@@ -4,13 +4,18 @@
 # Last update: 09/06/2019
 # Description: Procesar las alertas generadas & otras utilerias
 #######################################################################################
-import argparse, sys
+import argparse
+import sys
+from logging_advance import *
 from datetime import datetime
 from utils import *
 from utils_elk import *
 from flatten_json import flatten
+from elastic import *
 #######################################################################################
 dict_real_name = {"hot": "aws.data.highio.i3", "warm": "aws.data.highstorage.d2", "ml":"aws.ml.m5", "m":"aws.master.r4"}
+#######################################################################################
+log = logging_advance(fullpath=__file__,send_elk=True)
 #######################################################################################
 def execute_readonly(index, value = True):
     flagExecuted=False
@@ -22,9 +27,9 @@ def execute_readonly(index, value = True):
         rpt_json = elk.req_put( URL_API , data=data_query )
         flagExecuted = True
     except:
-        print_json(rpt_json)
+        log.print_error("flagExecute={0}", name_function="execute_readonly", data_json=rpt_json)
     finally:
-        print("{2}|INFO |execute_index_read_only    |{0} | flagExecute={1}".format( index , flagExecuted , datetime.utcnow().isoformat()))
+        log.print_info("flagExecute={0}".format(flagExecuted), name_function="execute_readonly")
         return flagExecuted
 #######################################################################################
 def execute_forcemerge(index,cont=0):
@@ -44,19 +49,19 @@ def execute_forcemerge(index,cont=0):
             flagExecuted = True
         else:
             cont = cont+1
-            print("{1}|INFO |execute_forcemerge         |executing_read_only {0}".format(cont, datetime.utcnow().isoformat()))
+            log.print_info("Executing read_only cont={0}".format(cont), name_function="execute_forcemerge", data_json=rpt_json)
             execute_readonly(index)
             flagExecuted = execute_forcemerge(index, cont=cont)
             return flagExecuted
     except:
-        print_json(rpt_json)
+        log.print_debug("Exception cached.", name_function="execute_forcemerge", data_json=rpt_json)
     finally:
-        print("{2}|INFO |execute_forcemerge         |{0} | flagExecute={1}".format( index , flagExecuted , datetime.utcnow().isoformat()))
+        log.print_info("Executed idx={0} flagExecute={1}".format(index, flagExecuted), name_function="execute_forcemerge", data_json=rpt_json)
     return flagExecuted
 #######################################################################################
 def execute_index_write_in_hot(index="*-write"):
     rpt = execute_migration_nodes([index],to_node="hot")
-    print("{1}|INFO |execute_index_write_in_hot     |HOT | flagExecute={0}".format(rpt , datetime.utcnow().isoformat()))
+    log.print_info("HOT | flagExecute={0}".format(rpt), name_function="execute_index_write_in_hot")
     return rpt
 #######################################################################################
 def execute_migration_nodes(list_index, to_node=""):
@@ -73,20 +78,20 @@ def execute_migration_nodes(list_index, to_node=""):
             rpt_json = elk.req_put( URL_API, data=data_query )
             flagExecuted = True
     except:
-        print("{2}|INFO |execute_migration_nodes      |{1} | flagExecute={0}".format(flagExecuted, list_index , datetime.utcnow().isoformat()))
+        log.print_info("{1} | flagExecute={0}".format(flagExecuted, list_index), name_function="execute_migration_nodes")
         print_json(rpt_json)
     finally:
         #print_json(rpt_json)
         return flagExecuted
 #######################################################################################
-def order_idx_in_hot_warm(types_of_index=[], num_idx_in_hot=2):
+def order_idx_in_hot_warm(types_of_index=[], num_idx_in_hot=1):
     # {type_of_index}-{groups_by_index}-000000
     dict_idx = { }
     for idx_type in types_of_index:
         idx_pattern = "{0}*".format(idx_type)
         list_idx = get_simple_list_index(idx_pattern, sort_reverse=True)
         list_idx_hot = get_simple_list_index(idx_pattern + "-write")
-        list_idx.remove( list_idx_hot[0] )
+        #list_idx.remove( list_idx_hot[0] ) By default idx write in Hot Node.
         dict_idx.update( 
             {idx_type : {
                 "hot" : list_idx[:num_idx_in_hot],
@@ -97,7 +102,7 @@ def order_idx_in_hot_warm(types_of_index=[], num_idx_in_hot=2):
     #print_json(dict_idx)
     return dict_idx
 #######################################################################################
-def police_index_in_hot(types_of_index=[], num_idx_in_hot=1):
+def police_index_in_hot(types_of_index=[], num_idx_in_hot=2, exe_idx_write_in_hot=True):
     flagExecute = True
     types_of_index=[
         "syslog-group01",
@@ -115,8 +120,10 @@ def police_index_in_hot(types_of_index=[], num_idx_in_hot=1):
         list_idx_warm = settings_on_idx['warm']
         flagExecuteHot = execute_migration_nodes(list_idx_hot,"hot")
         flagExecuteWarm = execute_migration_nodes(list_idx_warm,"warm")
-        print("{3}|INFO |police_index_in_hot  |{2:23s}| flagExecuteHot={1:5s} flagExecuteWarm={0:5s}".format( str(flagExecuteWarm), str(flagExecuteHot) , idx_type, datetime.utcnow().isoformat()))
+        log.print_info("{2:23s}| flagExecuteHot={1:5s} flagExecuteWarm={0:5s}".format( str(flagExecuteWarm), str(flagExecuteHot) , idx_type) , name_function="police_index_in_hot")
     #print_json(dict_idx_hot_warm)
+    if (exe_idx_write_in_hot):
+        execute_index_write_in_hot(index="*group*-write")
     return flagExecute
 #######################################################################################
 def police_space_over_percentage_by_node(value_usage_disk, type_node, flagExecute = False):
@@ -127,12 +134,12 @@ def police_space_over_percentage_by_node(value_usage_disk, type_node, flagExecut
         if (usage_in_percentage>=value_usage_disk):
             flagExecute=True
             break
-    print("{3}|INFO |police_space_over_percentage_by_node {0:.2f}% |{1:5s}| flagExecute={2}".format(value_usage_disk, type_node.upper() ,flagExecute , datetime.utcnow().isoformat()))
+    log.print_info("{0:.2f}% |{1:5s}| flagExecute={2}".format(value_usage_disk, type_node.upper() ,flagExecute), name_function="police_space_over_percentage_by_node")
     if flagExecute:
         index = "*group*"
         data_json = get_index_by_allocation(index,filter_by_allocation=type_node)
         #"acknowledged": true
-        print_json(data_json)
+        log.print_info("", name_function="police_space_over_percentage_by_node", data_json=data_json)
     return flagExecute
 #######################################################################################
 def get_parametersCMD_curator_elk():
@@ -165,13 +172,20 @@ def get_parametersCMD_curator_elk():
     elif command=="exe_forcemerge" and index!=None:
         #python curator_elk.py -c exe_forcemerge --index syslog-group05-000001
         execute_forcemerge(index)
+    elif command=="policy_hot_space_over" and value!=None:
+        #python curator_elk.py -c policy_hot_space_over -v 75.0
+        police_space_over_percentage_by_node(float(value),"hot")
+    elif command=="policy_warm_space_over" and value!=None:
+        #python curator_elk.py -c policy_warm_space_over -v 75.0
+        police_space_over_percentage_by_node(float(value),"warm")
     else:
         print("ERROR | No se ejecuto ninguna accion.")
     return
 #######################################################################################
 if __name__ == "__main__":
-    get_parametersCMD_curator_elk()
-    #police_index_in_hot()
+    log.print_info("Iniciando Curator")
+    #get_parametersCMD_curator_elk()
+    police_index_in_hot()
     #police_space_over_percentage_by_node(75.0,"hot")
     #police_space_over_percentage_by_node(75.0,"warm")
     #list_idx = [    "syslog-group01-000027", "syslog-group01-000028"]
