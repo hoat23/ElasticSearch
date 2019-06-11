@@ -11,7 +11,6 @@ from os.path import basename
 from datetime import datetime
 from utils import *
 from utils_elk import *
-from flatten_json import flatten
 from elastic import *
 #######################################################################################
 class logging_advance(object):
