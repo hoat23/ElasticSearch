@@ -10,7 +10,7 @@ from logging_advance import *
 from datetime import datetime
 from utils import *
 from utils_elk import *
-from flatten_json import flatten
+#from flatten_json import flatten
 from elastic import *
 #######################################################################################
 dict_real_name = {"hot": "aws.data.highio.i3", "warm": "aws.data.highstorage.d2", "ml":"aws.ml.m5", "m":"aws.master.r4"}
