@@ -172,10 +172,12 @@ def get_parametersCMD_curator_elk():
     if args.command: command = str(args.command)
     if args.value: value = str(args.value) 
     if args.index: index = str(args.index)
+    
+    log.print_info("INI |command={0}".format(command))
+    
     if( command==None):
         print("ERROR: Faltan parametros.")
         print("command\t [{0}]".format(command))
-        sys.exit(0)
     elif command=="exe_idx_write_in_hot" and index!=None: # index=*group*-write 
         #python curator_elk.py -c exe_idx_write_in_hot --index *group*-write
         execute_index_write_in_hot(index=index)
@@ -202,10 +204,11 @@ def get_parametersCMD_curator_elk():
         police_forcemerge()
     else:
         print("ERROR | No se ejecuto ninguna accion.")
+    log.print_info("END |command={0}".format(command))
+    sys.exit(0)
     return
 #######################################################################################
 if __name__ == "__main__":
-    #log.print_info("Iniciando Curator")
     get_parametersCMD_curator_elk()
     #police_index_in_hot()
     #police_space_over_percentage_by_node(75.0,"hot")
