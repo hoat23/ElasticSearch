@@ -60,7 +60,7 @@ def execute_forcemerge(index,cont=0):
     except:
         log.print_debug("Exception cached.", name_function="execute_forcemerge", data_json=rpt_json)
     finally:
-        log.print_info("{0:23s}| flagExecute={1}".format(index, flagExecuted), name_function="execute_forcemerge", data_json=rpt_json)
+        log.print_info("{0:23s}| cont={1} flagExecute={2}".format(index, cont, flagExecuted), name_function="execute_forcemerge", data_json=rpt_json)
     return flagExecuted
 #######################################################################################
 def execute_index_write_in_hot(index="*-write"):
@@ -124,7 +124,7 @@ def police_index_in_hot(types_of_index=[], num_idx_in_hot=2, exe_idx_write_in_ho
         list_idx_warm = settings_on_idx['warm']
         flagExecuteHot = execute_migration_nodes(list_idx_hot,"hot")
         flagExecuteWarm = execute_migration_nodes(list_idx_warm,"warm")
-        log.print_info("{2:23s}| flagExecuteHot={1:5s} | flagExecuteWarm={0:5s}".format( str(flagExecuteWarm), str(flagExecuteHot) , idx_type) , name_function="police_index_in_hot")
+        log.print_info("{2:23s}| flagExecuteHot={1:5s} | flagExecuteWarm={0:5s}".format( str(flagExecuteWarm), str(flagExecuteHot) , idx_type) , name_function="police_index_in_hot", data_json=settings_on_idx)
     #print_json(dict_idx_hot_warm)
     if (exe_idx_write_in_hot):
         execute_index_write_in_hot(index="*group*-write")
