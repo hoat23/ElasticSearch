@@ -60,7 +60,7 @@ def execute_forcemerge(index,cont=0):
     except:
         log.print_debug("Exception cached.", name_function="execute_forcemerge", data_json=rpt_json)
     finally:
-        log.print_info("Executed idx={0} flagExecute={1}".format(index, flagExecuted), name_function="execute_forcemerge", data_json=rpt_json)
+        log.print_info("{0:23s}| flagExecute={1}".format(index, flagExecuted), name_function="execute_forcemerge", data_json=rpt_json)
     return flagExecuted
 #######################################################################################
 def execute_index_write_in_hot(index="*-write"):
