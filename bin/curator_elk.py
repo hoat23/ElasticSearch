@@ -1,7 +1,7 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 09/06/2019
+# Last update: 12/06/2019
 # Description: Procesar las alertas generadas & otras utilerias
 #######################################################################################
 import argparse
@@ -197,7 +197,7 @@ def get_parametersCMD_curator_elk():
     elif command=="policy_warm_space_over" and value!=None:
         #python curator_elk.py -c policy_warm_space_over -v 75.0
         police_space_over_percentage_by_node(float(value),"warm")
-    elif command=="police_forcemerge":
+    elif command=="policy_forcemerge":
         #python curator_elk.py -c police_forcemerge
         police_forcemerge()
     else:
