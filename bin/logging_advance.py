@@ -73,7 +73,7 @@ class logging_advance(object):
         return debug_json
     
     def print_log(self, tipo_log, description, data_json={}, name_function="", send_elk=False):
-        debug_json = self.formatting(self.service, description, tipo_log=tipo_log, name_function=name_function, print_screen=True)
+        debug_json = self.formatting(self.service, description, tipo_log=tipo_log, name_function=name_function, data_json=data_json, print_screen=True)
         if send_elk or self.flagSendELK: 
             self.send_to_elk(debug_json)
         return debug_json
