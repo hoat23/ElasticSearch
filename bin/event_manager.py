@@ -15,8 +15,9 @@ from engine_facebook import *
 from credentials import *
 from server_gmail import *
 #######################################################################################
-host = 'localhost'
-port = 80
+host = HOST_SERVER # defined in credentials.py
+port = PORT_SERVER # defined in credentials.py
+#######################################################################################
 app = Flask(__name__)
 #######################################################################################
 def build_data_aditional(data_json):
