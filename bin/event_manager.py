@@ -11,7 +11,7 @@ from utils_elk import *
 from datetime import datetime, timedelta
 from flask import Flask, request, abort
 from engine_elastic import *
-#from engine_facebook import *
+from engine_facebook import *
 from credentials import *
 from server_gmail import *
 #######################################################################################

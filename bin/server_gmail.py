@@ -2,7 +2,7 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 27/05/2019
-# Last update: 30/05/2019
+# Last update: 13/06/2019
 # Description: Server to send emails using gmail account.
 #########################################################################################
 import smtplib, imghdr, os
@@ -130,14 +130,25 @@ def build_template_by_incidencia(one_doc, siem_incidencias,save_template=False, 
 #########################################################################################
 def send_email_by_incidencia(incidencia,data_adicional):
     siem_incidencia = get_incidencia(incidencia["_source"]["incidencia_type"])
-    subject = "ID:{3:05d} | {0} | {1} | {2} ".format(   siem_incidencia["rule_name"] , incidencia["_source"]["cmdb"]["client"], siem_incidencia["subject"] , incidencia['_source']['incidencia_id'])
-    file_template = build_template_by_incidencia(incidencia, siem_incidencia, save_template=False, data_adicional=data_adicional)
-    message = build_email(email_to_send=siem_incidencia['recipients']['emails'], 
-                email_subject=subject, 
-                email_body={"alternative": file_template})
-    send_email(message)
-    return
-
+    
+    try:
+        texto = siem_incidencia['subject_email']['text']
+        fields = siem_incidencia['subject_email']['fields']
+        subject_str =  eval( "\"{0}\".format({1})".format(  texto, (",". join(fields)) ) )
+    except:
+        subject_str = "ID:{3:05d} | {0} | {1} | {2} ".format(   siem_incidencia["rule_name"] , incidencia["_source"]["cmdb"]["client"], siem_incidencia["subject"] , incidencia['_source']['incidencia_id'])
+    finally:
+        file_template = build_template_by_incidencia(incidencia, siem_incidencia, save_template=False, data_adicional=data_adicional)
+        message = build_email(
+                    email_to_send=siem_incidencia['recipients']['emails'], 
+                    email_subject=subject_str, 
+                    email_body={
+                        "text": siem_incidencia['subject'] ,
+                        "alternative": file_template
+                        })
+        send_email(message)
+        return
+#########################################################################################
 def testing_template():
     print("[INFO ] testing_template()")
     #THIS_DIR = os.path.dirname(os.path.abspath(__file__))
