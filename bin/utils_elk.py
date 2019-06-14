@@ -1,7 +1,7 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 31/05/2019
+# Last update: 14/06/2019
 # Description: Procesar las alertas generadas & otras utilerias
 #######################################################################################
 import argparse, sys
@@ -166,7 +166,7 @@ def update_dict_monitoring_by_client(client ,elk=elasticsearch(), index="supra_d
 #######################################################################################
 def download_cmdb_elk(client,elk=None, index="supra_data", nameFile = "cmdb_elk.yml", coding='utf-8'):
     array_data = []
-    list_common_fields =["cliente","sede","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo"]
+    list_common_fields =["cliente","sede","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo","tipo_ip_equipo"]
     if elk==None: elk = elasticsearch()
     URL_API = "{0}/{1}/_search".format(elk.get_url_elk(), index)
     if(client!="AWS"): 
@@ -652,6 +652,7 @@ def get_parametersCMD():
         list_resume_nodes = get_resume_space_nodes(filter_type_node=value)    
         print_json(list_resume_nodes)
     elif command=="get_list_client":
+        #python utils_elk.py -c get_list_client
         list_client = get_list_clientes()
         print_list(list_client, num=1)
     else:
