@@ -1,7 +1,7 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 14/06/2019
+# Last update: 02/07/2019
 # Description: Procesar las alertas generadas & otras utilerias
 #######################################################################################
 import argparse, sys
@@ -23,7 +23,7 @@ def bytesELK2json(data,codification='utf-8'):
     finally:
        return d_dict
 #######################################################################################
-def build_json_cmdb_elk(data_json):
+def build_json_cmdb_elk(data_json, ignoreNullFields=False):
     bucket_list = []
     for clientes in data_json['aggregations']['cliente']['buckets']:
         cliente =  clientes['key']
@@ -34,27 +34,34 @@ def build_json_cmdb_elk(data_json):
             protocolos_json = {}
             list_protocolos = []
             for protocolos in ip_s['groupProtocolo']['buckets']:
+                flagIgnoreValue=False
                 protocolo = protocolos['key']
-                if len(protocolo)==0 or protocolo==None: 
-                    print("[WARN ] build_json_cmdb_elk | ERROR <field:protocolo>[ ip:{0:16s} client:{2:20s} protocolo: {1}]".format(ip, protocolo, cliente))
+                if (len(protocolo)==0 or protocolo==None): 
+                    print("[WARN ] build_json_cmdb_elk | Error protocolo not defined [ ip:{0:16s} client:{2:20s} protocolo: {1}]".format(ip, protocolo, cliente))
                     protocolo="ping"
-                list_protocolos.append(protocolo)
+                    flagIgnoreValue = True
                 list_puertos = []
                 for puertos in protocolos['groupPort']['buckets']:
                     puerto = puertos['key']
                     dif_fields = puertos['tops']['hits']['hits'][0]['_source']
                     if (len(puerto)<=0): puerto = "default"
                     list_puertos.append( { 'value' : puerto, "cmdb" : dif_fields})
-                if (len(list_puertos)>0):
+                if (len(list_puertos)>0) and (not flagIgnoreValue):
                     protocolos_json.update( { protocolo: list_puertos } )
-                to_monitoring.append( protocolo )
+                if not flagIgnoreValue:
+                    to_monitoring.append( protocolo )
+                    list_protocolos.append(protocolo)
             #print(" [{0:25s}] \t {1:15s} {2}".format(cliente, ip, ",".join(list_protocolos)))
             data_by_device = {
                 "ip": ip,
                 "protocolo": protocolos_json,
                 "to_monitoring": to_monitoring
             }
-            list_datos_by_client.append(data_by_device)
+            if len(list_protocolos)==0 and (ignoreNullFields):
+                print("[INFO ] build_json_cmdb_elk | Ignoring: protocolo is null [ ip:{0:16s} client:{1:20s} ]".format(ip, cliente))
+                pass
+            else:
+                list_datos_by_client.append(data_by_device)
         bucket_list.append({"key": cliente, "buckets": list_datos_by_client})
     
     return bucket_list
@@ -133,13 +140,13 @@ def build_query_monitoring_by_client(client,all_ips=False,elk=elasticsearch(), i
     data_query.update( data_aggs)
     return data_query
 #######################################################################################
-def update_dict_monitoring_by_client(client ,elk=elasticsearch(), index="supra_data", list_dif_fields=["tipo_ip_equipo","ip_group"]):
-    print("update_dict_monitoring_by_client")
+def update_dict_monitoring_by_client(client ,elk=elasticsearch(), index="supra_data", list_dif_fields=["tipo_ip_equipo","ip_group"], ignoreNullFields=False, flagSaveFile=False):
+    print("update_dict_monitoring_by_client | {0} | ignoreNullFields={1}".format(client, ignoreNullFields))
     data_query = build_query_monitoring_by_client(client, elk=elk, index=index, list_dif_fields=list_dif_fields)
     #Doing the query to elk.
     URL_API = "{0}/{1}/_search".format(elk.get_url_elk(), index)
     rpt_json = elk.req_get(URL_API, data=data_query)
-    data_procesed = build_json_cmdb_elk(rpt_json)
+    data_procesed = build_json_cmdb_elk(rpt_json, ignoreNullFields=ignoreNullFields)
     #save_yml(data_procesed,"cmdb_testing.yml")
 
     index_config = "index_configuration"
@@ -160,8 +167,11 @@ def update_dict_monitoring_by_client(client ,elk=elasticsearch(), index="supra_d
     if "status" in rpt_json:
         if rpt_json["status"]==400:
             #print_json(data_to_update)
+            flagSaveFile = True
             print_json(rpt_json)
-            #save_yml(data_to_update, nameFile="debug.yml")
+    if flagSaveFile: 
+        print("[INFO] update_dict_monitoring_by_client [{0}| Saving in debug.yml" )
+        save_yml(data_to_update, nameFile="debug.yml")
     return 
 #######################################################################################
 def download_cmdb_elk(client,elk=None, index="supra_data", nameFile = "cmdb_elk.yml", coding='utf-8'):
@@ -645,7 +655,8 @@ def get_parametersCMD():
     elif command=="download_incidencias":
         download_incidencias()
     elif command=="update_dict_monitoring" and client!=None:
-        update_dict_monitoring_by_client(client)
+        #python utils_elk.py -c update_dict_monitoring -f <CLIENT_NAME> -v ignoreNullFields
+        update_dict_monitoring_by_client(client, ignoreNullFields=True)
     elif command=="get_resume_space_nodes":
         #python utils_elk.py -c get_resume_space_nodes -v hot-warm
         if value != "hot-warm" and value != "hot" and value != "warm": value = None
@@ -661,7 +672,6 @@ def get_parametersCMD():
 #######################################################################################
 if __name__ == "__main__":
     print("[INI] utils_elk.py")
-    #update_dict_monitoring_by_client("PROMPERU")
     #update_fields_in_document()
     get_parametersCMD()
     #block_write_index("syslog-alianza-write", write_block=True)
