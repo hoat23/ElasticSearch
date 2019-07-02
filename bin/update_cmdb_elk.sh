@@ -5,5 +5,5 @@ cd
 cd /usr/share/logstash 
 pwd
 @echo off
-python3 utils_elk.py -c update -v cmdb_elk.yml
+python3 utils_elk.py -c download_cmdb_elk -f AWS
 
