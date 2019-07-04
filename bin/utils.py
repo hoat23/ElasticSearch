@@ -2,23 +2,31 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 30/11/2018
-# Last update: 05/06/2019
+# Last update: 04/07/2019
 # Description: Codigo util, para uso general
 # sys.setdefaultencoding('utf-8') #reload(sys)
-# hash- > hashlib https://recursospython.com/guias-y-manuales/hashlib-md5-sha/
-# crypto -> DES https://www.laurentluce.com/posts/python-and-cryptography-with-pycrypto/
+# hash      -> hashlib https://recursospython.com/guias-y-manuales/hashlib-md5-sha/
+# crypto    -> DES https://www.laurentluce.com/posts/python-and-cryptography-with-pycrypto/
+# re        -> https://relopezbriega.github.io/blog/2015/07/19/expresiones-regulares-con-python/
 # pip install pycryptodome
 #########################################################################################
-import sys, requests, json, csv
+import sys
+import requests
+import json
+import csv
 #from flask import Flask, request, abort
 import jwt # pip install pyjwt
-import time, os, socket
+import time
+import os
+import socket
+import functools
+import yaml #pip install pyyaml
+import base64 as b64
 from subprocess import Popen, PIPE
 from collections import OrderedDict
 from pygments import lexers, formatters, highlight
 from jinja2 import Environment, FileSystemLoader #pip install jinja2
-import functools, yaml #pip install pyyaml
-import base64 as b64
+
 #######################################################################################
 def print_list(lista, num=0, sort=True):
     if(sort): lista.sort()
@@ -190,7 +198,7 @@ def getelementfromjson(data_json,path_to_element):
     #print_json(walker)
     return list_keys
 #######################################################################################
-def list2json(list_field, list_value,remove_char=None,type_data=None,return_err=False):
+def list2json(list_field, list_value,remove_char=None,type_data=None,return_err=False,flag_def_val=True,default_val=None):
     data_json = {}
     len_field = len(list_field)
     len_value = len(list_value)
@@ -201,12 +209,15 @@ def list2json(list_field, list_value,remove_char=None,type_data=None,return_err=
         type_data=None
 
     if ( len_field > len_value):
-        print("[ERROR] list2json len_field:{0} > len_value:{1}".format(len_field,len_value))
-        for i in range(0,len_value):
-            print(" ->  {0:02d} |[{1}:{2}]".format(i, str(list_field[i]), str(list_value[i])))
-        for i in range(len_value,len_field):
-            print(" ->  {0:02d} |[{1}:NULL]".format(i, str(list_field[i])))
-        flag_err=-1
+        if (flag_def_val):
+            list_value.append(default_val)
+        else:
+            print("[ERROR] list2json len_field:{0} > len_value:{1}".format(len_field,len_value))
+            for i in range(0,len_value):
+                print(" ->  {0:02d} |[{1}:{2}]".format(i, str(list_field[i]), str(list_value[i])))
+            for i in range(len_value,len_field):
+                print(" ->  {0:02d} |[{1}:NULL]".format(i, str(list_field[i])))
+            flag_err=-1
     elif( len_field < len_value ):
         print("[WARN] list2json len_field:{0} < len_value:{1}  ".format(len_field,len_value))
         for i in range(0,len_field):
@@ -436,6 +447,12 @@ def save_json(data_json, nameFile="data.json"):
         for release in data_json.values():
             json_file.write(release)
             json_file.write("\n")
+    return
+#######################################################################################
+def testing_crypto():
+    #pycparser, cffi, six, asynlcrypto, cryptography, pynacl, paramiko
+    #asnlcrypto-0.24.0 bcrypt-3.1.6 cffi-1.12.3 cryptography-2.7 paramiko-2.5.0 pycparser-2.19 pynacl-1.3.0 six-1.12.0
+    #Investigar PGP - Envio de mensajes usando cifrado simetrico y asimetrico
     return
 #######################################################################################
 # doc_jwt http://ras-software-blog.com/?p=107
