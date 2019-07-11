@@ -65,7 +65,7 @@ def execute_forcemerge(index,cont=0):
 #######################################################################################
 def execute_index_write_in_hot(index="*-write"):
     rpt = execute_migration_nodes([index],to_node="hot")
-    log.print_info("HOT | index={0} | flagExecute={1}".format(index, rpt), name_function="execute_index_write_in_hot")
+    log.print_info("HOT | flagExecute={1} | index={0}".format(index, rpt), name_function="execute_index_write_in_hot")
     return rpt
 #######################################################################################
 def execute_migration_nodes(list_index, to_node=""):
