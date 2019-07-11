@@ -1,7 +1,7 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 12/06/2019
+# Last update: 11/07/2019
 # Description: Procesar las alertas generadas & otras utilerias
 #######################################################################################
 import argparse
@@ -65,7 +65,7 @@ def execute_forcemerge(index,cont=0):
 #######################################################################################
 def execute_index_write_in_hot(index="*-write"):
     rpt = execute_migration_nodes([index],to_node="hot")
-    log.print_info("HOT | flagExecute={0}".format(rpt), name_function="execute_index_write_in_hot")
+    log.print_info("HOT | index={0} | flagExecute={1}".format(index, rpt), name_function="execute_index_write_in_hot")
     return rpt
 #######################################################################################
 def execute_migration_nodes(list_index, to_node=""):
@@ -201,7 +201,7 @@ def get_parametersCMD_curator_elk():
         police_space_over_percentage_by_node(float(value),"warm")
     elif command=="policy_forcemerge":
         #python curator_elk.py -c police_forcemerge
-        police_forcemerge()
+        police_forcemerge(type_node="hot")#by default only execute in hot nodes
     else:
         print("ERROR | No se ejecuto ninguna accion.")
     log.print_info("END |command={0}".format(command))
