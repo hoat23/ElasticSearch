@@ -71,7 +71,7 @@ def execute_index_write_in_hot(index="*-write"):
 def exe_update_setting(index,filter_by_allocation='warm'):
     return
 #######################################################################################
-def execute_migration_nodes(list_index, to_node=""):
+def execute_migration_nodes(list_index, to_node="hot"):
     flagExecuted=False
     #PUT *-group*-write/_settings
     if len(list_index)==0: return False
@@ -96,7 +96,7 @@ def execute_migration_nodes(list_index, to_node=""):
     except:
         log.print_info("{1} | flagExecute={0}".format(flagExecuted, list_index), name_function="execute_migration_nodes")
     finally:
-        #print_json(rpt_json)
+        print_json(rpt_json)
         return flagExecuted
 #######################################################################################
 def order_idx_in_hot_warm(types_of_index=[], num_idx_in_hot=1, flag_remove_write_from_hot=False):
@@ -134,8 +134,8 @@ def police_index_in_hot(types_of_index=[], num_idx_in_hot=2, exe_idx_write_in_ho
         settings_on_idx = dict_idx_hot_warm[idx_type]
         list_idx_hot = settings_on_idx['hot']
         list_idx_warm = settings_on_idx['warm']
-        flagExecuteHot = execute_migration_nodes(list_idx_hot,"hot")
-        flagExecuteWarm = execute_migration_nodes(list_idx_warm,"warm")
+        flagExecuteHot =execute_migration_nodes(list_idx_hot,"hot")
+        flagExecuteWarm =execute_migration_nodes(list_idx_warm,"warm")
         log.print_info("{2:23s}| flagExecuteHot={1:5s} | flagExecuteWarm={0:5s}".format( str(flagExecuteWarm), str(flagExecuteHot) , idx_type) , name_function="police_index_in_hot", data_json=settings_on_idx)
     #print_json(dict_idx_hot_warm)
     if (exe_idx_write_in_hot):
@@ -221,12 +221,12 @@ def get_parametersCMD_curator_elk():
     return
 #######################################################################################
 if __name__ == "__main__":
-    get_parametersCMD_curator_elk()
+    #get_parametersCMD_curator_elk()
     #police_index_in_hot()
     #police_space_over_percentage_by_node(75.0,"hot")
     #police_forcemerge()
     #police_space_over_percentage_by_node(75.0,"warm")
     #list_idx = [    "syslog-group01-000027", "syslog-group01-000028"]
-    #list_idx = ["syslog-group02-000028"]
-    #execute_migration_nodes(list_idx, to_node="warm")
+    list_idx = ["syslog-group01-000040"]
+    execute_migration_nodes(list_idx, to_node="warm")
     pass
