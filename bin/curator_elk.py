@@ -15,7 +15,7 @@ from elastic import *
 #######################################################################################
 dict_real_name = {"hot": "aws.data.highio.i3", "warm": "aws.data.highstorage.d2", "ml":"aws.ml.m5", "m":"aws.master.r4"}
 #######################################################################################
-log = logging_advance(fullpath=__file__,send_elk=True)
+log = logging_advance(fullpath=__file__,send_elk=False)
 #######################################################################################
 def execute_readonly(index, value = True):
     flagExecuted=False
@@ -49,7 +49,7 @@ def execute_forcemerge(index,cont=0):
             blocks_write="false"
         if blocks_write=="true" or blocks_write==True:
             URL_API = "{0}/_forcemerge".format( elk.get_url_elk() )
-            rpt_json = elk.req_post( URL_API , data = {})
+            #rpt_json = elk.req_post( URL_API , data = {})
             flagExecuted = True
         else:
             cont = cont+1
@@ -68,6 +68,9 @@ def execute_index_write_in_hot(index="*-write"):
     log.print_info("HOT | flagExecute={1} | index={0}".format(index, rpt), name_function="execute_index_write_in_hot")
     return rpt
 #######################################################################################
+def exe_update_setting(index,filter_by_allocation='warm'):
+    return
+#######################################################################################
 def execute_migration_nodes(list_index, to_node=""):
     flagExecuted=False
     #PUT *-group*-write/_settings
@@ -78,7 +81,16 @@ def execute_migration_nodes(list_index, to_node=""):
         real_node_name = dict_real_name[to_node]
         for index in list_index:
             URL_API = "{0}/{1}/_settings".format(elk.get_url_elk(), index )
-            data_query = {"index.routing.allocation.include.instance_configuration": real_node_name}
+            data_query = {
+                    "index.routing.allocation" : {
+                        "include": {
+                            "instance_configuration": real_node_name
+                        },
+                        "require": {
+                            "data": to_node
+                        }
+                    }
+            }
             rpt_json = elk.req_put( URL_API, data=data_query )
             flagExecuted = True
     except:
@@ -130,16 +142,12 @@ def police_index_in_hot(types_of_index=[], num_idx_in_hot=2, exe_idx_write_in_ho
         execute_index_write_in_hot(index="*group*-write")
     return flagExecute
 #######################################################################################
-def police_forcemerge(idx_pattern="*-group*",type_node="hot"):
+def police_forcemerge(idx_pattern="*-group*",type_node="warm"):
     list_idx = get_index_by_allocation(idx_pattern,filter_by_allocation=type_node)
     list_idx_write = get_simple_list_index(idx_pattern+"-write")
-    #print_json(list_idx)
-    #print_json(list_idx_write)
-    for index_write in list_idx_write:
-        if index_write in list_idx:
-            list_idx.remove( index_write )
-    log.print_info("type_node={0:4s} | num_idx={1}".format(type_node, len(list_idx)),name_function="police_forcemerge", data_json={"buckets": list_idx})
-    for index in list_idx:
+    list_forcemerge = sorted(list(set(list_idx) - set(list_idx_write)))
+    log.print_info("type_node={0:4s} | num_idx={1}".format(type_node, len(list_forcemerge)),name_function="police_forcemerge", data_json={"buckets": list_forcemerge})
+    for index in list_forcemerge:
         execute_forcemerge(index)
     return
 #######################################################################################
@@ -178,6 +186,10 @@ def get_parametersCMD_curator_elk():
     if( command==None):
         print("ERROR: Faltan parametros.")
         print("command\t [{0}]".format(command))
+    elif command=="exe_update_setting" and index!=None:
+        #python curator_elk.py -c exe_update_setting --index *group
+        exe_update_setting(index,filter_by_allocation='warm')
+        pass
     elif command=="exe_idx_write_in_hot" and index!=None: # index=*group*-write 
         #python curator_elk.py -c exe_idx_write_in_hot --index *group*-write
         execute_index_write_in_hot(index=index)
@@ -215,5 +227,6 @@ if __name__ == "__main__":
     #police_forcemerge()
     #police_space_over_percentage_by_node(75.0,"warm")
     #list_idx = [    "syslog-group01-000027", "syslog-group01-000028"]
+    #list_idx = ["syslog-group02-000028"]
     #execute_migration_nodes(list_idx, to_node="warm")
     pass
