@@ -72,6 +72,7 @@ def exe_update_setting(index,filter_by_allocation='warm'):
     return
 #######################################################################################
 def execute_migration_nodes(list_index, to_node="hot"):
+    if type(list_index)==str: list_index = [list_index]
     flagExecuted=False
     #PUT *-group*-write/_settings
     if len(list_index)==0: return False
@@ -190,6 +191,8 @@ def get_parametersCMD_curator_elk():
         #python curator_elk.py -c exe_update_setting --index *group
         exe_update_setting(index,filter_by_allocation='warm')
         pass
+    elif command=="exe_idx_move_to_warm" and index!=None:
+        execute_migration_nodes(index, to_node='warm')
     elif command=="exe_idx_write_in_hot" and index!=None: # index=*group*-write 
         #python curator_elk.py -c exe_idx_write_in_hot --index *group*-write
         execute_index_write_in_hot(index=index)
@@ -221,12 +224,12 @@ def get_parametersCMD_curator_elk():
     return
 #######################################################################################
 if __name__ == "__main__":
-    #get_parametersCMD_curator_elk()
+    get_parametersCMD_curator_elk()
     #police_index_in_hot()
     #police_space_over_percentage_by_node(75.0,"hot")
     #police_forcemerge()
     #police_space_over_percentage_by_node(75.0,"warm")
     #list_idx = [    "syslog-group01-000027", "syslog-group01-000028"]
-    list_idx = ["syslog-group01-000040"]
-    execute_migration_nodes(list_idx, to_node="warm")
+    #list_idx = ["syslog-group01-000040"]
+    #execute_migration_nodes(list_idx, to_node="warm")
     pass
