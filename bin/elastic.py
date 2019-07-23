@@ -10,14 +10,41 @@
 # {'index.routing.allocation.include.instance_configuration':'aws.data.highstorage.d2'}
 ########### from flask import Flask, request, abort
 #########################################################################################
-import sys, requests, json
-from datetime import datetime, timedelta
+import sys
+import requests
+import json
 import time
+from datetime import datetime, timedelta
 from credentials import * #URL="<elastic>" #USER="usr_elk"  #PASS="pass_elk"
 from utils import *
 #######################################################################################
 class elasticsearch():            
-    def __init__(self, url=None, user=None , pas=None):
+    def __init__(self, url=None, user=None , pas=None, config_json=None):
+        self.config_json = None
+        self.ip = None
+        self.port = None
+        if config_json!=None:
+            if len(config_json)==1:
+                config_json = config_json[0]
+                """
+                ############### credentials_elasticsearch.yml ################
+                elasticsearch:
+                    ip: https://00011034032043u24.us-east-1.aws.found.io
+                    port: 9243 #value by default
+                    user: username
+                    pass: passwordpassword
+                """
+                if config_json["type"]=="file":
+                    name_file = config_json["file"]
+                    self.config_json = loadYMLtoJSON(name_file)
+                    self.ip = self.config_json["elasticsearch"]["ip"]
+                    self.port = self.config_json["elasticsearch"]["port"]
+                    
+                    url = "{0}:{1}".format(self.ip , self.port)
+                    pas = self.config_json["elasticsearch"]["pass"]
+                    user = self.config_json["elasticsearch"]["user"]
+            else:
+                print("INFO | elasticsearch | Falta especificar.")
         if(url==None):
             self.url_elk = URL
         else:
@@ -378,6 +405,19 @@ class elasticsearch():
         self.process_data(INDEX,"_doc")
         return
 #######################################################################################
+def test_conection_from_file():
+    config_json = {
+        "elasticsearch": [{
+            "type": "file",
+            "send": True,
+            "file": "credential_elasticsearch.yml"
+        }]
+    }
+    ec = elasticsearch(config_json=config_json["elasticsearch"])
+    rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state?pretty")
+    print_json(rpt_json)
+    return
+######################################################################################
 def test():
     print("Test class elastic")
     #ec=elasticsearch(url=URL_M,user=USER_M,pas=PASS_M)
