@@ -6,7 +6,7 @@
 4. Descargar el binario de https://www.elastic.co/es/downloads/logstash y extraer el ZIP en C:\logstash\.
 5. Crear un archivo en C:\logstash\bin\logstash.conf con el siguiente contenido.
 
-''''
+```
 input {
     # Accept input from the console.
     stdin{}
@@ -22,13 +22,13 @@ output {
             codec => "rubydebug"
     }
 }
-'''
+```
 
 6. Iniciar el logstash, ejecutando el archivo batch, con el flag "-f" para definir la localización del archivvo de configuración.
 
-'''
+```
 c:\logstash\bin\logstash.bat -f c:\logstash\bin\logstash.conf
-'''
+```
 7. Para detener el logstash ejecutar "CTRL+C"
 
 ###Instalar Logstash como un servicio en Windows.
