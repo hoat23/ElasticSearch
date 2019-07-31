@@ -7,6 +7,7 @@ Servidor Jupyter instalado en AWS que permite interactuar con la data de Elastic
 
 ## Estructura de carpetas:
 
+```
  |--bin: Contiene los ejecutables y programas.
  |
  |--nbconfig: Contiene archivos de configuración propios de Jupyter.
@@ -16,5 +17,5 @@ Servidor Jupyter instalado en AWS que permite interactuar con la data de Elastic
  |--tmp: Contiene documentos temporales generados durante la ejecución de cualquier ejecutable o programa.
  |
  |--notebook: Contiene los Notebok para testear codigo Python.
- 
+ ```
  ## WARNNING: No modificar el archivo "jupyter_notebook_config.py".
