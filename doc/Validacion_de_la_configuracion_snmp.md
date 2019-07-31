@@ -13,7 +13,7 @@ apt install snmp
 Ejecutar el siguiente comando ("-v2c" para la versión 2 y "-v1" para la versión 1):
 
 ```
-snmp -v2c -c [comunidad] [IP]
+snmpwalk -v2c -c [comunidad] [IP]
 ```
 
 Si recibe una respuesta difrente a
