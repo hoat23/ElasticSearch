@@ -1,17 +1,23 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 30/05/2019
-# Description: Procesar las alertas generadas
+# Last update: 31/06/2019
+# Description: Procesar las alertas generadas de elastic
+#              Se agrego soporte de REdis para manejar mayor cantidad de eventos
 # More info: https://help.victorops.com/knowledge-base/victorops-elasticsearch-watcher-integration/
 #########################################################################################
-import sys, requests, json, ast, time
+import sys
+import requests
+import json
+import ast
+import time
+import redis
 from utils import print_json
 from utils_elk import *
 from datetime import datetime, timedelta
 from flask import Flask, request, abort
 from engine_elastic import *
-from engine_facebook import *
+#from engine_facebook import *
 from credentials import *
 from server_gmail import *
 #######################################################################################
@@ -19,6 +25,23 @@ host = HOST_SERVER # defined in credentials.py
 port = PORT_SERVER # defined in credentials.py
 #######################################################################################
 app = Flask(__name__)
+#######################################################################################
+def get_hit_count_global():
+    retries = 5
+    count = -1
+    while True:
+        try: 
+            count = cache.incr('hits')
+        except redis.exceptions.ConnectionError as exc:
+            print("get_hit_count_global | ERROR | {0}".format( exc ))
+            if retries == 0:
+                raise exc
+            retries -= 1
+            time.sleep(0.5)
+        finally:
+            print("get_hit_count_global | INFO | count = {0}".format( count ))
+            return count
+    return
 #######################################################################################
 def build_data_aditional(data_json):
     data_aditional = []
@@ -31,20 +54,20 @@ def build_data_aditional(data_json):
 @app.route('/incidencias_elk', methods=['POST'])
 def post_incidencias_elk():
     print("{0}|INFO | POST | incidencias_elk".format( datetime.utcnow().isoformat() ))
-    path = "aggregations.incidencia_types.[buckets].clientes.[buckets].cluster_name.[buckets].last_run.hits.[hits]._id"
+    path = "aggregations.incidencia_types.[buckets].clientes.[buckets].ip_group.[buckets].last_run.hits.[hits]._id"
     data_json = request.json
     #save_yml(data_json, nameFile="incidencias_elk.yml")
     for incidencia_type in data_json['aggregations']['incidencia_types']['buckets']:
         #print("incidencia_type     : " + incidencia_type['key'])
         for cliente in incidencia_type['clientes']['buckets']:
             #print("    cliente     : " + cliente['key'])
-            for cluster in cliente['cluster_name']['buckets']:
-                #print("         cluster: " + cluster['key'])
-                rpt_json = get_data_by_filter("heartbeat-group*-write",terms=[{"cmdb.client":cliente['key']},{"cmdb.cluster_name":cluster['key']}])
+            for ip_group in cliente['ip_group']['buckets']:
+                #print("         ip_group: " + ip_group['key'])
+                rpt_json = get_data_by_filter("heartbeat-group*-write",terms=[{"cmdb.client":cliente['key']},{"cmdb.ip_group":ip_group['key']}])
                 data_aditional = build_data_aditional(rpt_json)
                 #print_list(data_aditional)
                 #print_json(rpt_json)
-                for item in cluster['last_run']['hits']['hits']:
+                for item in ip_group['last_run']['hits']['hits']:
                     #print("             _id:" + item['_id'])
                     #print_json(item['_source'])
                     send_email_by_incidencia(item,data_aditional)
@@ -67,6 +90,7 @@ def handle_verification():
         print("{0}|ERROR| GET | handle_verification | token_incorrecto".format( datetime.utcnow().isoformat() ))
         return "Error, wrong validation token H23."
 #--------------------------------------------------------------------------------------
+"""
 @app.route('/webhook', methods=['POST'])
 def handle_message():
     #Handle messages sent by facebook messenger to the application
@@ -74,7 +98,35 @@ def handle_message():
     print("{0}|INFO | POST | handle_message | length:{1}".format( datetime.utcnow().isoformat() , len(data_json)))
     rpt = engine_facebook(data_json)
     return rpt
+"""
+import functools as ft
+import pandas as pd
+@app.route('/', methods=['POST'])
+def webhook_elk():
+    print("/ [POST]-> "+ str(sys.stdout.flush()) )
+    data = request.data
+    data_parse = bytesELK2json(data)
+    # Extrayendo header
+    headers_list = data_parse['metadata']['headers_list']
+    email_json = data_parse['metadata']['email']
+    table_data = aggregation2table(data_parse,headers_list=headers_list)
+    # Evaluando condicional para trigger alert
+    table_df = pd.DataFrame(table_data, columns = headers_list)
+    #print(table_df)
+    trigger = ft.reduce( lambda a,b: a|b, table_df['monitor_status']=="down" )
+    table_html = table_df.to_html()
+    file_html = open("heartbeat_table.html", "w")
+    file_html.write(table_html)
+    file_html.close()
+    #print( table_html )
+    send_email_by_watcher(email_json)
+    print("----> trigger:{0}".format(trigger))
+    
+    #table_data2csv(table_data, headers_list = headers_list, nameFile="heartbeat_list_ip.csv")
+    #save_yml( data_parse , nameFile="alertas_elk.yml")
+    return '', 200
 #######################################################################################
 if __name__ == '__main__':
+    #cache = redis.Redis(host='localhost', port = port)
     app.run(host = host, port = port)
 

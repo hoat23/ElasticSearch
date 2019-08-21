@@ -2,8 +2,9 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 27/05/2019
-# Last update: 13/06/2019
+# Last update: 21/08/2019
 # Description: Server to send emails using gmail account.
+# Notas: https://pypi.org/project/imgkit/
 #########################################################################################
 import smtplib, imghdr, os
 from email.message import EmailMessage
@@ -11,8 +12,8 @@ from credentials import *
 from utils import *
 from utils_elk import *
 #########################################################################################
-EMAIL_ADDRESS = "{0}@{1}".format( USER_, DOMINIO)
-EMAIL_PASSWORD = "{0}".format( PASS_ )
+EMAIL_ADDRESS = "{0}@{1}".format( USER_G, DOMINIO)
+EMAIL_PASSWORD = "{0}".format( PASS_G )
 #########################################################################################
 def build_email(email_to_send=["deiner.zapata@supra.com.pe"], 
                 email_subject="[H23] You are awesome :-)", 
@@ -49,7 +50,7 @@ def build_email(email_to_send=["deiner.zapata@supra.com.pe"],
         else:
             msg.add_alternative(var_template, subtype=file_type)
     except:
-        #print("| INFO|  build_email| Falta implementar")
+        print("| INFO|  build_email| Falta implementar")
         pass
     try:
         for one_file in email_body['files']:
@@ -71,6 +72,7 @@ def send_email(message):
     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
         smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         smtp.send_message(message)
+        smtp.quit()
     print('INFO| send_email() | Everything is right :-).')
     return 
 #########################################################################################
@@ -128,13 +130,24 @@ def build_template_by_incidencia(one_doc, siem_incidencias,save_template=False, 
     #print_json(template_with_fields_updated)
     return file_template
 #########################################################################################
+def send_email_by_watcher(data_json):
+    message = build_email(
+                email_to_send=data_json['recipients'], 
+                email_subject=data_json['subject'], 
+                email_body=data_json['email_body'])
+    send_email(message)
+#########################################################################################
 def send_email_by_incidencia(incidencia,data_adicional):
     siem_incidencia = get_incidencia(incidencia["_source"]["incidencia_type"])
     
     try:
         texto = siem_incidencia['subject_email']['text']
         fields = siem_incidencia['subject_email']['fields']
-        subject_str =  eval( "\"{0}\".format({1})".format(  texto, (",". join(fields)) ) )
+        #print("DBG |send_email_by_incidencia | texto={0} | fields={1}".format(texto, fields))
+        temp = "\"{0}\".format({1})".format(  texto, (",". join(fields)) )
+        print("DBG |{0}".format(temp)) 
+        #subject_str =  eval( temp )
+        subject_str = "{0} |{1}| {2}".format(siem_incidencia['rule_name'],incidencia['_source']['cmdb']['client'],siem_incidencia['subject'])
     except:
         subject_str = "ID:{3:05d} | {0} | {1} | {2} ".format(   siem_incidencia["rule_name"] , incidencia["_source"]["cmdb"]["client"], siem_incidencia["subject"] , incidencia['_source']['incidencia_id'])
     finally:

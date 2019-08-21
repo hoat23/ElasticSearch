@@ -1,7 +1,7 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 02/07/2019
+# Last update: 21/08/2019
 # Description: Procesar las alertas generadas & otras utilerias
 # links: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html
 # termtos2svg 
@@ -408,26 +408,27 @@ def get_table_list (
             list_data.append(aux_list)
     return list_data
 #######################################################################################
-def aggregation2table(aggregation, path="CHAIN_FIRST.aggregations.clientes", headers_list = ['clientes', 'sedes','ip_group','reporting_ip','monitor_status']):
+def aggregation2table(data_json, path_to_aggregations="payload.CHAIN_FIRST.aggregations", headers_list = ['clientes', 'sedes','ip_group','reporting_ip','monitor_status']):
     # walking in aggregation lineal
     table_data = []
-    try: 
-        table_data = get_table_list(aggregation['CHAIN_FIRST']['aggregations'], headers_list=headers_list, tmp_data = {}, list_data=[])
+    try:
+        aggregation = getelementfromjson(data_json,path_to_aggregations)[0]
+        table_data = get_table_list(aggregation, headers_list=headers_list, tmp_data = {}, list_data=[])
     except:
         print("aggregation2table | ERROR | Can't build table for this aggregation.")
         print_json(aggregation)
+        raise
     finally:
         return table_data
+
+import functools as ft
 def table_data2csv(table_data, headers_list = [], nameFile="dataFrame.csv"):
     print("table_data2csv | INFO | nameFile={0}".format(nameFile))
-    tipo = type(table_data)
-    print("tipo de dato "+ str(tipo))
+    #type(table_data) = list
     # Convirtiendo a dataframe
-    df = pd.DataFrame(table_data, columns = headers_list)
-    print(df)
-    #export_csv = df.to_csv(nameFile, index=None, header=True)
-    #print(export_csv)
-    return
+    table_df = pd.DataFrame(table_data, columns = headers_list)
+    table_df.to_csv(nameFile, index=None, header=True)
+    return table_df
 #######################################################################################
 def get_resume_space_nodes(filter_type_node = None):
     #filter_type_node = {"hot", "warm", "hot-warm"}
