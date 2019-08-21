@@ -3,8 +3,11 @@
 # Date: 02/14/2019
 # Last update: 02/07/2019
 # Description: Procesar las alertas generadas & otras utilerias
+# links: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html
+# termtos2svg 
 #######################################################################################
 import argparse, sys
+import pandas as pd
 from datetime import datetime
 from elastic import *
 from utils import *
@@ -51,7 +54,7 @@ def build_json_cmdb_elk(data_json, ignoreNullFields=False):
                 if not flagIgnoreValue:
                     to_monitoring.append( protocolo )
                     list_protocolos.append(protocolo)
-            #print(" [{0:25s}] \t {1:15s} {2}".format(cliente, ip, ",".join(list_protocolos)))
+            print(" [{0:25s}] | {1:15s} | {2}".format(cliente, ip, ",".join(list_protocolos)))
             data_by_device = {
                 "ip": ip,
                 "protocolo": protocolos_json,
@@ -63,7 +66,7 @@ def build_json_cmdb_elk(data_json, ignoreNullFields=False):
             else:
                 list_datos_by_client.append(data_by_device)
         bucket_list.append({"key": cliente, "buckets": list_datos_by_client})
-    
+    #print_json(bucket_list)
     return bucket_list
 #######################################################################################
 def build_query_monitoring_by_client(client,all_ips=False,elk=elasticsearch(), index="supra_data", list_dif_fields=[], add_on_doc_in_groupIP=False, list_common_fields=["cliente","sede","nombre_cluster","ip_group","categoria","modelo_equipo","marca_equipo"]):
@@ -147,7 +150,7 @@ def update_dict_monitoring_by_client(client ,elk=elasticsearch(), index="supra_d
     URL_API = "{0}/{1}/_search".format(elk.get_url_elk(), index)
     rpt_json = elk.req_get(URL_API, data=data_query)
     data_procesed = build_json_cmdb_elk(rpt_json, ignoreNullFields=ignoreNullFields)
-    #save_yml(data_procesed,"cmdb_testing.yml")
+    #save_yml(data_procesed,"update_dict_monitoring_by_client.yml")
 
     index_config = "index_configuration"
     doc_id = "dict_monitoring_"+client.lower().replace(" ","_")
@@ -381,6 +384,50 @@ def get_index_by_allocation(names_index, filter_by_allocation=None ,filter_idx_s
         data_json =  data_json[filter_by_allocation]
     #print_json( data_json )
     return data_json
+#######################################################################################
+# get_table_list() recurrent function to extract and save values when walking in the json-aggregation.
+def get_table_list (
+    aggregation,                # aggregation in json format
+    headers_list = [],          # headers_list for the table, but also names in the aggregations terms
+    walk = 0,                   # count : Numeric variable that indicate the level of anidation in aggregation
+    tmp_data = {},              # tm_data: Json data that save old values
+    list_data = []):            # list_data: Variable that save the list values when walk is in the end of aggregation
+
+    current_field = headers_list[walk] # obteniendo el primer elemento del arreglo
+    #print("get_table_list | INFO | walk = {0}".format( walk) )
+    for one_doc in aggregation[current_field]['buckets']:
+        key = one_doc['key']
+        #print("get_table_list | INFO |{2}|\t {0}:{1}".format(current_field, key, walk))
+        tmp_data.update( {walk: key} )
+        if walk<len(headers_list)-1:
+            list_data = get_table_list(one_doc, headers_list=headers_list, tmp_data=tmp_data, walk = walk+1, list_data=list_data)
+        if walk == len(headers_list)-1:
+            aux_list = []
+            for i in range( 0 , len(headers_list) ):
+                aux_list.append( tmp_data[i] )
+            list_data.append(aux_list)
+    return list_data
+#######################################################################################
+def aggregation2table(aggregation, path="CHAIN_FIRST.aggregations.clientes", headers_list = ['clientes', 'sedes','ip_group','reporting_ip','monitor_status']):
+    # walking in aggregation lineal
+    table_data = []
+    try: 
+        table_data = get_table_list(aggregation['CHAIN_FIRST']['aggregations'], headers_list=headers_list, tmp_data = {}, list_data=[])
+    except:
+        print("aggregation2table | ERROR | Can't build table for this aggregation.")
+        print_json(aggregation)
+    finally:
+        return table_data
+def table_data2csv(table_data, headers_list = [], nameFile="dataFrame.csv"):
+    print("table_data2csv | INFO | nameFile={0}".format(nameFile))
+    tipo = type(table_data)
+    print("tipo de dato "+ str(tipo))
+    # Convirtiendo a dataframe
+    df = pd.DataFrame(table_data, columns = headers_list)
+    print(df)
+    #export_csv = df.to_csv(nameFile, index=None, header=True)
+    #print(export_csv)
+    return
 #######################################################################################
 def get_resume_space_nodes(filter_type_node = None):
     #filter_type_node = {"hot", "warm", "hot-warm"}
@@ -655,7 +702,7 @@ def get_parametersCMD():
     elif command=="download_incidencias":
         download_incidencias()
     elif command=="update_dict_monitoring" and client!=None:
-        #python utils_elk.py -c update_dict_monitoring -f <CLIENT_NAME> -v ignoreNullFields
+        #python utils_elk.py -c update_dict_monitoring -f <CLIENT_NAME>
         update_dict_monitoring_by_client(client, ignoreNullFields=True)
     elif command=="get_resume_space_nodes":
         #python utils_elk.py -c get_resume_space_nodes -v hot-warm
