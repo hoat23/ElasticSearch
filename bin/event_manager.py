@@ -1,7 +1,7 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 31/06/2019
+# Last update: 22/08/2019
 # Description: Procesar las alertas generadas de elastic
 #              Se agrego soporte de REdis para manejar mayor cantidad de eventos
 # More info: https://help.victorops.com/knowledge-base/victorops-elasticsearch-watcher-integration/
@@ -12,6 +12,8 @@ import json
 import ast
 import time
 import redis
+import functools as ft
+import pandas as pd
 from utils import print_json
 from utils_elk import *
 from datetime import datetime, timedelta
@@ -99,31 +101,48 @@ def handle_message():
     rpt = engine_facebook(data_json)
     return rpt
 """
-import functools as ft
-import pandas as pd
 @app.route('/', methods=['POST'])
 def webhook_elk():
+    print("/ [POST]-> "+ str(sys.stdout.flush()) )
+    data = request.data
+    data_parse = bytesELK2json(data)
+    print_json(data_parse)
+    print("/heartbeat [POST] | len(list_groups):{0}".format(len(list_groups)) )
+    return '', 200
+#######################################################################################
+@app.route('/alert_heartbeat', methods=['POST'])
+def webhook_alert_heartbeat():
     print("/ [POST]-> "+ str(sys.stdout.flush()) )
     data = request.data
     data_parse = bytesELK2json(data)
     # Extrayendo header
     headers_list = data_parse['metadata']['headers_list']
     email_json = data_parse['metadata']['email']
+    groupby = data_parse['metadata']['transform']['groupby']
     table_data = aggregation2table(data_parse,headers_list=headers_list)
     # Evaluando condicional para trigger alert
     table_df = pd.DataFrame(table_data, columns = headers_list)
-    #print(table_df)
-    trigger = ft.reduce( lambda a,b: a|b, table_df['monitor_status']=="down" )
-    table_html = table_df.to_html()
-    file_html = open("heartbeat_table.html", "w")
-    file_html.write(table_html)
-    file_html.close()
-    #print( table_html )
-    send_email_by_watcher(email_json)
-    print("----> trigger:{0}".format(trigger))
-    
-    #table_data2csv(table_data, headers_list = headers_list, nameFile="heartbeat_list_ip.csv")
-    #save_yml( data_parse , nameFile="alertas_elk.yml")
+    list_groups = []
+    for name, group_df in table_df.groupby(groupby[0]):
+        #print(name)
+        trigger = ft.reduce( lambda a,b: a|b , group_df['monitor_status']=="down" )
+        if trigger:
+            list_groups.append( group_df )
+    if len(list_groups)>0:
+        new_table_df = pd.concat(list_groups)
+        new_table_df.reset_index(drop=True, inplace=True)
+        new_table_df.index +=  1
+        #print( new_table_df )
+        table_html = new_table_df.to_html()
+        file_html = open("heartbeat_table.html", "w")
+        file_html.write(table_html)
+        file_html.close()
+        #print( table_html )
+        send_email_by_watcher(email_json)
+        #table_data2csv(table_data, headers_list = headers_list, nameFile="heartbeat_list_ip.csv")
+        #save_yml( data_parse , nameFile="alertas_elk.yml")
+    else:
+        print("/heartbeat [POST] | len(list_groups):{0}".format(len(list_groups)) )
     return '', 200
 #######################################################################################
 if __name__ == '__main__':
