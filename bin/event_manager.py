@@ -101,7 +101,7 @@ def handle_message():
     rpt = engine_facebook(data_json)
     return rpt
 """
-@app.route('/', methods=['POST'])
+@app.route('/test', methods=['POST'])
 def webhook_elk():
     print("/ [POST]-> "+ str(sys.stdout.flush()) )
     data = request.data
@@ -118,7 +118,9 @@ def webhook_alert_heartbeat():
     # Extrayendo header
     headers_list = data_parse['metadata']['headers_list']
     email_json = data_parse['metadata']['email']
+    file_name_html = email_json['email_body']['alternative']
     groupby = data_parse['metadata']['transform']['groupby']
+    watch_id = data_parse['watch_id']
     table_data = aggregation2table(data_parse,headers_list=headers_list)
     # Evaluando condicional para trigger alert
     table_df = pd.DataFrame(table_data, columns = headers_list)
@@ -134,7 +136,8 @@ def webhook_alert_heartbeat():
         new_table_df.index +=  1
         #print( new_table_df )
         table_html = new_table_df.to_html()
-        file_html = open("heartbeat_table.html", "w")
+        print("webhook_alert_heartbeat | INFO | id:{0} | {1}".format(watch_id, file_name_html))
+        file_html = open(file_name_html, "w")
         file_html.write(table_html)
         file_html.close()
         #print( table_html )

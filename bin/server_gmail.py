@@ -73,6 +73,7 @@ def send_email(message):
         smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         smtp.send_message(message)
         smtp.quit()
+        print("finn")
     print('INFO| send_email() | Everything is right :-).')
     return 
 #########################################################################################
