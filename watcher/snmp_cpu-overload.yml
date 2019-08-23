@@ -1,0 +1,133 @@
+{
+    "trigger" : {
+      "schedule" : {
+        "interval" : "5m"
+      }
+    },
+    "input" : {
+      "search" : {
+        "request" : {
+          "search_type" : "query_then_fetch",
+          "indices" : [
+            "snmp-*"
+          ],
+          "rest_total_hits_as_int" : true,
+          "body" : {
+            "size" : 0,
+            "query" : {
+              "bool" : {
+                "must" : [
+                  {
+                    "range" : {
+                      "@timestamp" : {
+                        "from" : "now-5m",
+                        "to" : "now"
+                      }
+                    }
+                  },
+                  {
+                    "range" : {
+                      "fgSysCpuUsage" : {
+                        "gte" : 85
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "aggregations" : {
+              "num_device_by_ip" : {
+                "cardinality" : {
+                  "field" : "devip"
+                }
+              },
+              "clientes" : {
+                "terms" : {
+                  "field" : "client.keyword",
+                  "size" : 80
+                },
+                "aggs" : {
+                  "sedes" : {
+                    "terms" : {
+                      "field" : "sede.keyword",
+                      "size" : 20,
+                      "min_doc_count" : 1
+                    },
+                    "aggs" : {
+                      "ip_s" : {
+                        "terms" : {
+                          "field" : "devip",
+                          "size" : 80,
+                          "min_doc_count" : 1
+                        },
+                        "aggs" : {
+                          "stats_cpu_usage" : {
+                            "stats" : {
+                              "field" : "fgSysCpuUsage"
+                            }
+                          },
+                          "typeDevice" : {
+                            "terms" : {
+                              "field" : "type_device.keyword",
+                              "min_doc_count" : 1
+                            }
+                          },
+                          "sede" : {
+                            "terms" : {
+                              "field" : "sede.keyword",
+                              "min_doc_count" : 1
+                            }
+                          },
+                          "client" : {
+                            "terms" : {
+                              "field" : "client.keyword",
+                              "min_doc_count" : 1
+                            }
+                          },
+                          "ip" : {
+                            "terms" : {
+                              "field" : "devip",
+                              "min_doc_count" : 1
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "condition" : {
+      "compare" : {
+        "ctx.payload.aggregations.num_device_by_ip.value" : {
+          "gt" : 0
+        }
+      }
+    },
+    "throttle_period_in_millis" : 900000,
+    "actions" : {
+      "email_admin" : {
+        "throttle_period_in_millis" : 3600000,
+        "email" : {
+          "profile" : "standard",
+          "to" : [
+            "mi.email@domain.com.pe"
+          ],
+          "subject" : "Network CPU Critical was triggered - SUPRA ELASTICSEARCH",
+          "body" : {
+            "html" : "<h2> ALERT FROM ELASTICSEARCH </h2><br/><p>There are {{ctx.payload.aggregations.num_device_by_ip.value}} devices over 85% CPU usage.</p><br/><ul>{{#ctx.payload.aggregations.clientes.buckets}}<li>{{key}}</li>{{#sedes.buckets}}<ul>{{#ip_s.buckets}}<li>SEDE: {{sede.buckets.0.key}}, IP:{{ip.buckets.0.key}}, TYPE DEVICE:{{typeDevice.buckets.0.key}}, MAX CPU USAGE:{{stats_cpu_usage.max}}%</li>{{/ip_s.buckets}}</ul>{{/sedes.buckets}}{{/ctx.payload.aggregations.clientes.buckets}}</ul>"
+          }
+        }
+      }
+    },
+    "metadata" : {
+      "name" : "snmp_cpu-overload",
+      "xpack" : {
+        "type" : "json"
+      }
+    }
+  }
