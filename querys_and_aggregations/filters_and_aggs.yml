@@ -1,0 +1,32 @@
+GET heartbeat-group01-write/_search
+{
+  "size": 0,
+  "aggs": {
+    "MONITOR_STATUS": {
+      "filters": {
+        "filters": {
+          "DOWN_FILTER": {
+            "bool": {
+              "should": [{"match": {"monitor.status": "down"}}]
+            }
+          },
+          "UP_FILER": {
+            "bool": {
+              "should": [{"match": {"monitor.status": "up"}}]
+            }
+          }
+        }
+      },
+      "aggs": {
+        "_COUNT": {
+          "bucket_script": {
+            "buckets_path": {
+              "field": "_count"
+            },
+            "script": "params.field"
+          }
+        }
+      }
+    }
+  }
+}
