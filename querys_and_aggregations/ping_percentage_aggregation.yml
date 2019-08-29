@@ -1,0 +1,70 @@
+GET heartbeat-group01-write/_search
+{
+  "size": 0,
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "range": {
+            "@timestamp": {
+              "from": "now-5m"
+            }
+          }
+        },
+        {
+          "exists": {
+            "field": "cmdb.reporting_ip"
+          }
+        },
+        {
+          "match": {
+            "monitor.status": "down"
+          }
+        }
+      ]
+    }
+  },
+  "aggregations": {
+    "group_by_client": {
+      "terms": {
+        "field": "cmdb.client",
+        "size": 100
+      },
+      "aggs": {
+        "group_by_ip":{
+          "terms": {
+            "field": "cmdb.reporting_ip",
+            "size": 100
+          },
+          "aggs": {
+            "count_ping_down": {
+              "filter": { "term": { "monitor.status": "down" } }
+            },
+            "count_ping_up": {
+              "filter": { "term": { "monitor.status": "up" } }
+            },
+            "percentage_down": {
+              "bucket_script": {
+                "buckets_path": {
+                  "d_down": "count_ping_down._count",
+                  "d_up": "count_ping_up._count"
+                },
+                "script": """
+                double total = (params.d_down + params.d_up);
+                return (params.d_down * 100 ) / total;
+                """
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "sort": [
+    {
+      "@timestamp": {
+        "order": "desc"
+      }
+    }
+  ]
+}
