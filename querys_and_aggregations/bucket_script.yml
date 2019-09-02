@@ -1,0 +1,103 @@
+GET heartbeat-group01-write/_search
+{
+  "size": 0,
+  "aggs": {
+    "monitor_status": {
+      "filter": {
+        "term": {
+          "cmdb.client": "YANBAL"
+        }
+      }, 
+      "aggs": {
+          "COUNT_DOWN": {
+            "scripted_metric": {
+              "params": {
+                "field_value": "down",
+                "field_name": "monitor.status"
+              },
+              "init_script": """
+              //INICIALIZANDO VARIABLES
+              state.transactions = [];
+              """,
+              "map_script": """
+              //EXECUTE IN EVERY DOCUMENT
+              String val2compare = params.field_value;
+              String nameKey2compare = params.field_name;
+              String nameKey2compare_str = doc[nameKey2compare].value;
+              long cont = 0;
+              if (nameKey2compare_str == val2compare){
+                state.transactions.add(1); //2n+1 -> conditional true
+              }else{
+                state.transactions.add(0); //2n   -> conditional false 
+              }
+              """,
+              "combine_script": """
+              //EXECUTE IN EVERY SHARD
+              long data_count = 0;
+              for (num_one_or_zero in state.transactions){
+                data_count += num_one_or_zero;
+              }
+              return data_count;
+              """,
+              "reduce_script": """
+              //EXECUTE IN CLUSTER AND RETURN FINAL VALUE
+              double data_count = 0;
+              for (count_by_shards in states){
+                data_count += count_by_shards;
+              }
+              return data_count;
+              """
+            }
+          },
+          "COUNT_UP": {
+            "scripted_metric": {
+              "params": {
+                "field_value": "up",
+                "field_name": "monitor.status"
+              },
+              "init_script": """
+              //INICIALIZANDO VARIABLES
+              state.transactions = [];
+              """,
+              "map_script": """
+              //EXECUTE IN EVERY DOCUMENT
+              String val2compare = params.field_value;
+              String nameKey2compare = params.field_name;
+              String nameKey2compare_str = doc[nameKey2compare].value;
+              long cont = 0;
+              if (nameKey2compare_str == val2compare){
+                state.transactions.add(1); //2n+1 -> conditional true
+              }else{
+                state.transactions.add(0); //2n   -> conditional false 
+              }
+              """,
+              "combine_script": """
+              //EXECUTE IN EVERY SHARD
+              long data_count = 0;
+              for (num_one_or_zero in state.transactions){
+                data_count += num_one_or_zero;
+              }
+              return data_count;
+              """,
+              "reduce_script": """
+              //EXECUTE IN CLUSTER AND RETURN FINAL VALUE
+              double data_count = 0;
+              for (count_by_shards in states){
+                data_count += count_by_shards;
+              }
+              return data_count;
+              """
+            }
+          },
+          "RESUME":{
+            "bucket_script": {
+              "buckets_path": {
+                "COUNT_DOWN": "COUNT_DOWN"
+              },
+              "script": "params.COUNT_DOWN*100"
+            }
+          }
+        }
+    }
+  }
+}
