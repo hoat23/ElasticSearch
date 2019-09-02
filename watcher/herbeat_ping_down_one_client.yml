@@ -1,0 +1,211 @@
+{
+    "trigger" : {
+      "schedule" : {
+        "interval" : "4m"
+      }
+    },
+    "input" : {
+      "chain" : {
+        "inputs" : [
+          {
+            "CHAIN_FIRST" : {
+              "search" : {
+                "request" : {
+                  "search_type" : "query_then_fetch",
+                  "indices" : [
+                    "heartbeat-group01-write"
+                  ],
+                  "rest_total_hits_as_int" : true,
+                  "body" : {
+                    "size" : 0,
+                    "query" : {
+                      "bool" : {
+                        "filter" : [
+                          {"range" : { "@timestamp" : { "from" : "now-{{ctx.metadata.window}}" }}},
+                          {"exists" : {"field" : "cmdb.reporting_ip"}},
+                          {"term" : { "cmdb.client" : "{{ctx.metadata.client}}"}},
+                          {"term" : {"monitor.status" : "down"}}
+                        ]
+                      }
+                    },
+                    "aggregations" : {
+                      "num_devices_down" : {
+                        "cardinality" : { "field" : "cmdb.reporting_ip"}
+                      },
+                      "group_by_ip" : {
+                        "terms" : { "field" : "cmdb.reporting_ip", "size" : 100 },
+                        "aggs" : {
+                          "count_ping_down" : {
+                            "filter" : { "term" : { "monitor.status" : "down" } }
+                          },
+                          "count_ping_up" : {
+                            "filter" : { "term" : { "monitor.status" : "up" } }
+                          },
+                          "percentage_down" : {
+                            "bucket_script" : {
+                              "buckets_path" : {
+                                "d_down" : "count_ping_down._count",
+                                "d_up" : "count_ping_up._count"
+                              },
+                              "script" : """
+                                //double total = (params.d_down + params.d_up);
+                                double total = 12;
+                                return (params.d_down * 100 ) / total;
+                                """
+                            }
+                          }
+                        }
+                      },
+                      "clientes" : {
+                        "terms" : { "field" : "cmdb.client", "size" : 100 },
+                        "aggs" : {
+                          "sedes" : { "terms" : { "field" : "cmdb.sede", "size" : 100 },
+                            "aggs" : {
+                              "ip_group" : { "terms" : { "field" : "cmdb.ip_group", "size" : 100 },
+                                "aggs" : {
+                                  "reporting_ip" : { "terms" : { "field" : "cmdb.reporting_ip", "size" : 100, "min_doc_count" : 10 },
+                                    "aggs" : {
+                                      "count_ping_down" : {
+                                        "filter" : { "term" : { "monitor.status" : "down" } }
+                                      },
+                                      "count_ping_up" : {
+                                        "filter" : { "term" : { "monitor.status" : "up" } }
+                                      },
+                                      "percentage_down" : {
+                                        "bucket_script" : {
+                                          "buckets_path" : {
+                                            "d_down" : "count_ping_down._count",
+                                            "d_up" : "count_ping_up._count"
+                                          },
+                                          "script" : """
+                                        double total = 12;
+                                        return (params.d_down * 100 ) / total;
+                                          """
+                                        }
+                                      },
+                                      "monitor_status" : { "terms" : { "field" : "monitor.status" } },
+                                      "global_info" : {
+                                        "top_hits" : {
+                                          "sort" : [ { "@timestamp" : { "order" : "desc" } } ],
+                                          "_source" : {
+                                            "includes" : [ "cmdb", "elk", "monitor.status" ]
+                                          },
+                                          "size" : 1
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "sort" : [ { "@timestamp" : { "order" : "desc" } }, { "monitor.status" : { "order" : "asc" } } ]
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "condition" : {
+      "script" : {
+        "source" : "return ctx.payload.CHAIN_FIRST.aggregations.group_by_ip.buckets.stream().filter(t->t.percentage_down.value>ctx.metadata.rule.threshold.value).count() > 0",
+        "lang" : "painless"
+      }
+    },
+    "actions" : {
+      "email_admin" : {
+        "throttle_period_in_millis" : 1800000,
+        "condition" : {
+          "script" : {
+            "source" : "        return true;",
+            "lang" : "painless"
+          }
+        },
+        "email" : {
+          "profile" : "standard",
+          "to" : [
+            "deiner.zapata@supra.com.pe",
+            "soporte@supra.com.pe"
+          ],
+          "subject" : "{{ctx.metadata.client}} - {{ctx.metadata.rule.name}}",
+          "body" : {
+            "html" : """
+<h2>{{ctx.metadata.rule.name}}</h2>
+
+<p>There are {{ctx.payload.CHAIN_FIRST.aggregations.num_devices_down.value}} devices with status <b>down</b></p>
+<br/>
+<ul>{{#ctx.payload.CHAIN_FIRST.aggregations.clientes.buckets}}
+    <li><b>{{key}}</b></li>
+      <ul>{{#sedes.buckets}}
+        <li><b>SEDE: {{key}}</b></li>
+          <ul>{{#ip_group.buckets}}
+              <li><b>IP_GROUP: {{key}}</b></li>
+              <ul>{{#reporting_ip.buckets}}
+                <li>
+                    <b>SEDE  :</b>{{global_info.hits.hits.0._source.cmdb.sede}},
+                    <b>IP  :</b>{{global_info.hits.hits.0._source.cmdb.reporting_ip}},
+                    <b>Categoria  :</b>{{global_info.hits.hits.0._source.cmdb.categoria}},
+                    <b>Status down :</b>{{global_info.hits.hits.0._source.monitor.status}}
+                </li>
+                {{/reporting_ip.buckets}}
+              </ul>
+              {{/ip_group.buckets}}
+          </ul>
+        {{/sedes.buckets}}
+      </ul>
+    {{/ctx.payload.CHAIN_FIRST.aggregations.clientes.buckets}}
+</ul>
+"""
+          }
+        }
+      }
+    },
+    "metadata" : {
+      "whatsapp" : {
+        "recipients" : [ "+51982169331" ]
+      },
+      "transform" : {
+        "groupby" : [ "sedes" ]
+      },
+      "idx_pattern" : "heartbeat-group01-write",
+      "client" : "MY_CLIENTE",
+      "rule" : {
+        "severity" : 9,
+        "name" : "Device Ping Down",
+        "description" : "Detects a device does not reponding to ping by 4 minutes.",
+        "threshold" : {
+          "total_doc_count" : 12,
+          "field" : "percentage_down",
+          "value" : 80.0
+        },
+        "enabled" : [
+          "email"
+        ]
+      },
+      "threshold" : 60,
+      "window" : "4m",
+      "headers_list" : [
+        "clientes",
+        "sedes",
+        "ip_group",
+        "reporting_ip",
+        "tipo_ip_equipo",
+        "monitor_status"
+      ],
+      "email" : {
+        "email_body" : {
+          "alternative" : "alertpingmyclient.html",
+          "text" : "Detects a device does not reponding to ping by 4 minutes."
+        },
+        "recipients" : [
+          "deiner.zapata@dominio.com.pe"
+        ],
+        "subject" : "MY_CLIENTE - No pig response for 4 min. was triggered"
+      }
+    }
+  }
