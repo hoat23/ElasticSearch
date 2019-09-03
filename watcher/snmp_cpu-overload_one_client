@@ -1,0 +1,235 @@
+POST _watcher/watch/snmp_cpu-overload_one_client
+{
+    "metadata" : {
+      "whatsapp" : {
+        "recipients" : [
+          "+51982169331"
+        ]
+      },
+      "idx_pattern" : "snmp-group01-write",
+      "name" : "snmp_cpu-overload",
+      "client": "CLIENT_NAME",
+      "rule" : {
+        "severity" : 9,
+        "name" : "Network CPU Critical",
+        "description" : "Network CPU critical overload a threshold",
+        "thershold" : {
+          "field" : "fgSystemInfo.fgSysCpuUsage",
+          "description" : "Launch alert when [ field >= value ]",
+          "value" : 10
+        },
+        "enabled" : [
+          "whatsapp"
+        ]
+      },
+      "window" : "5m",
+      "xpack" : {
+        "type" : "json"
+      },
+      "email" : {
+        "recipients" : [
+          "deiner.zapata@supra.com.pe"
+        ],
+        "format": {
+          "unidades":{
+            "character": "%"
+          }
+        }
+      }
+    },
+    "trigger" : {
+      "schedule" : {
+        "interval" : "6m"
+      }
+    },
+    "input" : {
+      "chain": {
+        "inputs": [
+          {"CHAIN_FIRST" : {
+            "search" : {
+              "request" : {
+                "search_type" : "query_then_fetch",
+                "indices" : [
+                  "snmp-*"
+                ],
+                "rest_total_hits_as_int" : true,
+                "body" : {
+                  "size" : 0,
+                  "query" : {
+                    "bool" : {
+                      "must" : [
+                        {
+                          "range" : {
+                            "@timestamp" : {
+                              "from" : "now-{{ctx.metadata.window}}"
+                            }
+                          }
+                        },
+                        {
+                          "range" : {
+                            "{{ctx.metadata.rule.thershold.field}}" : {
+                              "gt" : "{{ctx.metadata.rule.thershold.value}}"
+                            }
+                          }
+                        },
+                        {
+                          "exists" : {
+                            "field" : "{{ctx.metadata.rule.thershold.field}}"
+                          }
+                        },
+                        {
+                          "term": {
+                            "cmdb.client": "{{ctx.metadata.client}}"
+                          }
+                        }
+                      ],
+                      "must_not": [
+                        {
+                          "term": {"cmdb.client": "default"}
+                        }
+                      ]
+                    }
+                  },
+                  "aggregations" : {
+                    "num_device_by_ip" : {
+                      "cardinality" : {
+                        "field" : "cmdb.reporting_ip"
+                      }
+                    },
+                    "group_by_ip": {
+                      "terms": { "field": "cmdb.reporting_ip"},
+                      "aggs": {
+                        "stats_usage" : {
+                          "stats" : {
+                            "field" : "{{ctx.metadata.rule.thershold.field}}"
+                          }
+                        }
+                      }
+                    },
+                    "clientes" : {
+                      "terms" : {
+                        "field" : "cmdb.client",
+                        "size" : 100
+                      },
+                      "aggs" : {
+                        "sedes" : {
+                          "terms" : {
+                            "field" : "cmdb.sede",
+                            "size" : 100,
+                            "min_doc_count" : 1
+                          },
+                          "aggs" : {
+                            "ip_s" : {
+                              "terms" : {
+                                "field" : "cmdb.reporting_ip",
+                                "size" : 100,
+                                "min_doc_count" : 1
+                              },
+                              "aggs" : {
+                                "stats_usage" : {
+                                  "stats" : {
+                                    "field" : "{{ctx.metadata.rule.thershold.field}}"
+                                  }
+                                },
+                                "global_info" : {
+                                  "top_hits" : {
+                                    "sort" : [
+                                      {
+                                        "@timestamp" : {
+                                          "order" : "desc"
+                                        }
+                                      }
+                                    ],
+                                    "_source" : {
+                                      "includes" : [
+                                        "cmdb",
+                                        "elk"
+                                      ]
+                                    },
+                                    "size" : 1
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }}
+        ]
+      }
+    },
+    "condition" : {
+      "script": {
+        "source": """
+        return ctx.payload.CHAIN_FIRST.aggregations.group_by_ip.buckets.stream().filter( t->t.stats_usage.avg > ctx.metadata.rule.thershold.value).count() > 0;
+        """,
+        "lang": "painless"
+      }
+    },
+    "actions" : {
+      "post_webhook" : {
+        "condition" : {
+          "script" : {
+            "source" : """
+            //desabilitado, es para uso futuro...en integración con otras plataformas
+            return false
+            """,
+            "lang" : "painless"
+          }
+        },
+        "webhook" : {
+          "scheme" : "http",
+          "host" : "8.8.8.8",
+          "port" : 3002,
+          "method" : "post",
+          "path" : "/bypass",
+          "params" : {
+            "watch_id" : "{{ctx.watch_id}}"
+          },
+          "headers" : {
+            "Content-Type" : "application/json"
+          },
+          "body" : "{{#toJson}}ctx{{/toJson}}"
+        }
+      },
+      "email_admin" : {
+        
+        "email" : {
+          "profile" : "standard",
+          "to" : [
+            "deiner.zapata@dominio.com.pe"
+          ],
+          "subject" : "{{ctx.metadata.client}} - {{ctx.metadata.rule.name}}",
+          "body" : {
+            "html" : """
+<h2>{{ctx.metadata.rule.name}}</h2>
+
+<p>There are {{ctx.payload.aggregations.num_device_by_ip.value}} devices over <b>{{ctx.metadata.rule.thershold.value}}% ({{ctx.metadata.rule.thershold.field}})</b>.</p>
+<br/>
+<ul>{{#ctx.payload.CHAIN_FIRST.aggregations.clientes.buckets}}
+    <li><b>{{key}}</b></li>{{#sedes.buckets}}
+    <ul>{{#ip_s.buckets}}
+        <li>
+            <b>SEDE:</b> {{global_info.hits.hits.0._source.cmdb.sede}},
+            <b>IP</b>: {{global_info.hits.hits.0._source.cmdb.reporting_ip}},
+            <b>Categoria:</b> {{global_info.hits.hits.0._source.cmdb.categoria}},
+            <b>Cluster Name:</b> {{global_info.hits.hits.0._source.cmdb.cluster_name}},
+            <b>Max value:</b> {{stats_usage.max}}{{ctx.metadata.email.format.unidades.character}},
+            <b>Average:</b> {{stats_usage.avg}}{{ctx.metadata.email.format.unidades.character}}
+        </li>
+        {{/ip_s.buckets}}
+    </ul>{{/sedes.buckets}}
+    {{/ctx.payload.CHAIN_FIRST.aggregations.clientes.buckets}}
+</ul>
+
+"""
+          }
+        }
+      }
+    }
+  }
