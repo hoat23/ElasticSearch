@@ -1,0 +1,9 @@
+## Listing plugins of Logstash 
+cd /usr/share/logstash/bin
+./logstash-plugin list --verbose
+
+## Update plugins of Logstash
+cd /usr/share/logstash/bin
+./logtash-plugin list update
+
+## Adding a Dictionary MIB to snmp
