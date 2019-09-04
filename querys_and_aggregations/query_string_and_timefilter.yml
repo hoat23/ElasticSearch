@@ -1,0 +1,67 @@
+GET syslog-group0*-write/_search
+{
+  "size": 1,
+  "query": {
+    "bool": {
+      "filter": [
+        {"query_string": {
+          "default_field": "logid_json.messageid",
+          "query": "22011 OR 22012 OR 28705 OR 278706"
+          }
+        },{
+          "range": { "@timestamp": { "gt": "now-10m" } }
+        }
+      ]
+    }
+  },
+  "_source": [
+    "logid_json",
+    "cmdb",
+    "elk",
+    "message"],
+  "sort": [
+    {
+      "@timestamp": {
+        "order": "desc"
+      }
+    }
+  ],
+  "aggs": {
+    "groupbyIP": {
+      "terms": {
+        "field": "cmdb.client",
+        "size": 100
+      },
+      "aggs": {
+        "groupbySEDE": {
+          "terms": {
+            "field": "cmdb.sede",
+            "size": 100
+          },
+          "aggs": {
+            
+              "NUM_TYPES_EVENT_DETECTED": {
+                "cardinality": {
+                  "field": "logid_json.messageid"
+                }
+              },
+            "groupbyEVENT": {
+              "terms": {
+                "field": "logid_json.messageid",
+                "size": 100
+              },
+              "aggs": {
+                "moreinfo": {
+                  "top_hits": {
+                    "size": 2,
+                    "_source": ["elk","cmdb","logid_json","_id"]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
