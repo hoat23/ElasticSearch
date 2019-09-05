@@ -24,9 +24,10 @@ More documentation about adding mib dictionary to Logstash:  https://discuss.ela
 ```
 yum install libsmi
 cd /usr/share/logstash/vendor/bundle/jruby/2.5.0/gems/snmp-1.3.2
-wget https://raw.githubusercontent.com/hallidave/ruby-snmp/master/import.rb
+wget https://raw.githubusercontent.com/hoat23/Firewall-Tools/master/ruby/import.rb
 mkdir mibs
 ```
+Link Original: https://raw.githubusercontent.com/hallidave/ruby-snmp/master/import.rb
 #### Creating diretory /mibs with the .mibs files
 ```
 cd /mibs
@@ -40,6 +41,7 @@ ruby import.rb mib/
 head data/ruby/snmp/mibs/FORTINET-CORE-MIB.yaml
 ```
 ### Configuration of pipeline in logstash for load dictionar MIB in format .YML
+
 ```
    snmptrap {
         port => 1620
@@ -47,5 +49,9 @@ head data/ruby/snmp/mibs/FORTINET-CORE-MIB.yaml
         yamlmibdir => "/usr/share/logstash/vendor/bundle/jruby/2.5.0/gems/snmp-1.3.2/data/ruby/snmp/mibs/"
    }
 ```
+My own dictionary's mibs:
+https://github.com/hoat23/Firewall-Tools/tree/master/mibs
+
+
 
 
