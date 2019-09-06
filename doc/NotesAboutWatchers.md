@@ -1,15 +1,18 @@
-#Diferencias entre input y chain-input, teniendo como base un input simple.
+## Diferencias entre input y chain-input, teniendo como base un input simple.
 
-INPUT SIMPLE
+### INPUT SIMPLE
 path_to_first_aggregation: ctx.payload.aggregations.[NAME_FIRST_AGGREGATION]
-
+```
 "input": {
 	"search": {...}
 }
+```
 
+### INPUT CHAIN
 
-INPUT CHAIN
 path_to_first_aggregation: ctx.payload.CHAIN_FIRST.aggregations.[NAME_FIRST_AGGREGATIONS]
+
+```
 "input": {
 	"chain": {
 		"inputs": [
@@ -19,3 +22,5 @@ path_to_first_aggregation: ctx.payload.CHAIN_FIRST.aggregations.[NAME_FIRST_AGGR
 		]
 	}
 }
+```
+
