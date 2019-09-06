@@ -4,7 +4,7 @@
 path_to_first_aggregation: ctx.payload.aggregations.[NAME_FIRST_AGGREGATION]
 ```
 "input": {
-	"search": {...}
+   "search": {...}
 }
 ```
 
@@ -14,13 +14,13 @@ path_to_first_aggregation: ctx.payload.CHAIN_FIRST.aggregations.[NAME_FIRST_AGGR
 
 ```
 "input": {
-	"chain": {
-		"inputs": [
-			"CHAIN_FIRST" : {
-				{"search": {...}}
-			}
-		]
-	}
+   "chain": {
+       "inputs": [
+          "CHAIN_FIRST" : {
+              "search": {...}
+           }
+        ]
+    }
 }
 ```
 
