@@ -1,4 +1,4 @@
-### Diferences between Input and Chain-Input
+### Differences between Input and Chain-Input
 
 #### INPUT SIMPLE
 path_to_first_aggregation: ctx.payload.aggregations.[NAME_FIRST_AGGREGATION]
