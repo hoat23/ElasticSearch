@@ -16,3 +16,5 @@ USE MASTER
 GO
 GRANT VIEW SERVER STATE TO "<USER_BD>"
 ```
+##### ERRORS 
+Error by credentials: error scanning single result: mssql: The server principal "USER_BD" is not able to access the database "BD_My_DataBaSe" under the current security context.
