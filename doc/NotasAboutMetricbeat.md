@@ -1,4 +1,10 @@
-### MONITORING USING MODULE MSQL
+# METRICBEAT
+### FILE OF GLOBAL CONFIGURATION
+```
+# /etc/metricbeat/metricbeat.yml
+# c:/ProgramaFiles/metricbeat/metricbeat.yml
+```
+### MONITORING USING MODULE MSSQL
 
 ```
 - module: mssql
