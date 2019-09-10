@@ -14,5 +14,5 @@ Execute this command into MSQL for enabled special permission (View Server State
 ```
 USE MASTER
 GO
-GRANT VIEW SERVER STATE TO "usrSupra"
+GRANT VIEW SERVER STATE TO "<USER_BD>"
 ```
