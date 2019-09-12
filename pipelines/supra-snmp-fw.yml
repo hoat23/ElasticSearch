@@ -1,5 +1,5 @@
 input {
-
+    #https://s3.amazonaws.com/fortinetweb/docs.fortinet.com/v2/attachments/08774c00-2437-11e9-b20a-f8bc1258b856/fortiwan-v4.4.1-handbook.pdf
     # --- DESCRIPTION OID BY FORTIWAN  V4.05.0 ---
     # 1.3.6.1.4.1.12356.118.2.1.2.1    -> fwnWanEntry 
     # 1.3.6.1.4.1.12356.118.2.1.2.1.1  -> fwnWanIndex          [table]
