@@ -1,0 +1,74 @@
+input {
+
+    # --- DESCRIPTION OID BY FORTIWAN  V4.05.0 ---
+    # 1.3.6.1.4.1.12356.118.2.1.2.1    -> fwnWanEntry 
+    # 1.3.6.1.4.1.12356.118.2.1.2.1.1  -> fwnWanIndex          [table]
+    # 1.3.6.1.4.1.12356.118.2.1.2.1.2  -> fwnWanDescr          [table]
+    # 1.3.6.1.4.1.12356.118.2.1.2.1.3  -> fwnWanStatus         [table] {1:ok, 2:failed, 3:disabled, 4:backup, 5:unkown}
+    # 1.3.6.1.4.1.12356.118.2.1.2.1.4  -> fwnWanIP             [table]
+    # 1.3.6.1.4.1.12356.118.2.1.2.1.13 -> fwnWanInOctets64     [table]
+    # 1.3.6.1.4.1.12356.118.2.1.2.1.14 -> fwnWanOutOctets64    [table]
+    # 1.3.6.1.4.1.12356.118.1          -> fgSystemInfo         [walk]
+
+    #### SINGLE OID
+    snmp {
+    hosts => [{ host => "udp:8.8.8.8/161" community => "logstash" version => "2c" retries => 2 timeout => 1000}]
+    walk => ["1.3.6.1.4.1.12356.118.1"]
+    interval => 60
+    }
+
+    #### TABLES
+    snmp {
+    hosts => [{ host => "udp:8.8.8.8/161" community => "logstash" version => "2c" retries => 2 timeout => 1000}]
+    tables => [ {"name" => "split_field" "columns" => ["1.3.6.1.4.1.12356.118.2.1.2.1.2", "1.3.6.1.4.1.12356.118.2.1.2.1.3", "1.3.6.1.4.1.12356.118.2.1.2.1.4","1.3.6.1.4.1.12356.118.2.1.2.1.13","1.3.6.1.4.1.12356.118.2.1.2.1.14"]} ]
+    interval => 60
+    }
+}
+
+
+filter {
+    mutate{
+        add_field => { "[elk][index]" => "snmp" }
+        rename => { "[host]" => "[cmdb][reporting_ip]" }
+        rename => { "[iso.org.dod.internet.private.enterprises.12356.118.1.1.0]" => "[fgSystemInfo][fwnSysHAMode]" }
+        rename => { "[iso.org.dod.internet.private.enterprises.12356.118.1.2.0]" => "[fgSystemInfo][fwnSysSlaveVersion]" }
+        rename => { "[iso.org.dod.internet.private.enterprises.12356.118.1.3.0]" => "[fgSystemInfo][fwnSysSlaveSerialNumber]" }
+        rename => { "[iso.org.dod.internet.private.enterprises.12356.118.1.4.0]" => "[fgSystemInfo][fwnSysSlaveUptime]" }
+        rename => { "[iso.org.dod.internet.private.enterprises.12356.118.1.5.0]" => "[fgSystemInfo][fwnSysSlaveState]" }
+        rename => { "[iso.org.dod.internet.private.enterprises.12356.118.1.6.0]" => "[fgSystemInfo][fwnSysConnections]" }
+        rename => { "[iso.org.dod.internet.private.enterprises.12356.118.1.7.0]" => "[fgSystemInfo][fwnSysCpuLoad]" }
+        rename => { "[iso.org.dod.internet.private.enterprises.12356.118.1.8.0]" => "[fgSystemInfo][fwnSysUsers]" }
+        rename => { "[iso.org.dod.internet.private.enterprises.12356.118.1.9.0]" => "[fgSystemInfo][fwnSysPktPerSec]" }
+        rename => { "[iso.org.dod.internet.private.enterprises.12356.118.1.10.0]" => "[fgSystemInfo][fwnSysConnectionRates]" }
+    }
+    
+    if [split_field]{
+        split {
+            field => "split_field"
+        }
+    }
+
+    mutate{
+        rename => { "[split_field][index]" => "[fwnWanEntry][index]" }
+        rename => { "[split_field][iso.org.dod.internet.private.enterprises.12356.118.2.1.2.1.4]" => "[fwnWanEntry][fwnWanIP]" }
+        rename => { "[split_field][iso.org.dod.internet.private.enterprises.12356.118.2.1.2.1.3]" => "[fwnWanEntry][fwnWanStatus]" }
+        rename => { "[split_field][iso.org.dod.internet.private.enterprises.12356.118.2.1.2.1.2]" => "[fwnWanEntry][fwnWanDescr]" }
+        rename => { "[split_field][iso.org.dod.internet.private.enterprises.12356.118.2.1.2.1.13]" => "[fwnWanEntry][fwnWanInOctets64]" }
+        rename => { "[split_field][iso.org.dod.internet.private.enterprises.12356.118.2.1.2.1.14]" => "[fwnWanEntry][fwnWanOutOctets64]" }
+    }
+
+    if [split_field]{
+        mutate{
+        remove_field => ["split_field"]
+        }
+    }
+
+}
+
+output {
+
+    pipeline {
+        send_to => "supra-filter"
+    }
+
+}
