@@ -1,0 +1,146 @@
+input {
+
+    pipeline {
+        address => "prompe-transform-snmp"
+    }
+    
+}
+
+filter {
+    
+    ########################### TEMPERATURA INI ###########################
+    mutate {
+        rename => [ "iso.org.dod.internet.private.enterprises.9.9.13.1.3.1.2.1008" , "[temp_1][StatusDescr]" ]
+        rename => [ "iso.org.dod.internet.private.enterprises.9.9.13.1.3.1.3.1008" , "[temp_1][StatusValue]" ]
+        rename => [ "iso.org.dod.internet.private.enterprises.9.9.13.1.3.1.4.1008" , "[temp_1][StatusTheshold]" ]
+        rename => [ "iso.org.dod.internet.private.enterprises.9.9.13.1.3.1.5.1008" , "[temp_1][LastShutdown]" ]
+        rename => [ "iso.org.dod.internet.private.enterprises.9.9.13.1.3.1.6.1008" , "[temp_1][State]" ]
+    
+        rename => [ "iso.org.dod.internet.private.enterprises.9.9.13.1.3.1.2.1006" , "[temp_1][StatusDescr]" ]
+        rename => [ "iso.org.dod.internet.private.enterprises.9.9.13.1.3.1.3.1006" , "[temp_1][StatusValue]" ]
+        rename => [ "iso.org.dod.internet.private.enterprises.9.9.13.1.3.1.4.1006" , "[temp_1][StatusTheshold]" ]
+        rename => [ "iso.org.dod.internet.private.enterprises.9.9.13.1.3.1.5.1006" , "[temp_1][LastShutdown]" ]
+        rename => [ "iso.org.dod.internet.private.enterprises.9.9.13.1.3.1.6.1006" , "[temp_1][State]" ]
+    
+        rename => [ "iso.org.dod.internet.private.enterprises.9.9.13.1.3.1.2.2006" , "[temp_2][StatusDescr]" ]
+        rename => [ "iso.org.dod.internet.private.enterprises.9.9.13.1.3.1.3.2006" , "[temp_2][StatusValue]" ]
+        rename => [ "iso.org.dod.internet.private.enterprises.9.9.13.1.3.1.4.2006" , "[temp_2][StatusTheshold]" ]
+        rename => [ "iso.org.dod.internet.private.enterprises.9.9.13.1.3.1.5.2006" , "[temp_2][LastShutdown]" ]
+        rename => [ "iso.org.dod.internet.private.enterprises.9.9.13.1.3.1.6.2006" , "[temp_2][State]" ]
+    }
+
+    if [temp_0] {
+        mutate{
+            add_field => { "[tmp_bucket]" => "%{[temp_0]}" }
+        }
+    }
+    if [temp_1] {
+        mutate{
+            add_field => { "[tmp_bucket]" => "%{[temp_1]}" }
+        }
+    }
+    if [temp_2] {
+        mutate{
+            add_field => { "[tmp_bucket]" => "%{[temp_2]}" }
+        }
+    }
+    
+    if [tmp_bucket]{
+        split {
+            field => "tmp_bucket"
+        }
+
+        mutate {
+            rename => { "[tmp_bucket]" => "[tmp]" }
+        }
+        
+            
+        json {
+            source => "[tmp]"
+            target => "[temp_json]"
+        }
+
+        mutate {
+            remove_field => [ "[tmp]" ]
+        }
+    }
+
+    ########################### TEMPERATURA FIN ###########################
+    if [transform]=="cpu_mem" {
+        mutate{
+            rename => { "[iso.org.dod.internet.mgmt.mib-2.system.sysUpTime.sysUpTimeInstance]" => "[system][sysUpTimeInstance]" }
+            rename => { "[iso.org.dod.internet.mgmt.mib-2.system.sysORLastChange.0]" => "[system][sysORLastChange]" }
+            rename => { "[iso.org.dod.internet.mgmt.mib-2.system.sysDescr.0]" => "[system][sysDescr]" }
+            rename => { "[iso.org.dod.internet.mgmt.mib-2.system.sysORTable.sysOREntry.sysORDescr.1]" => "[system][sysORDescr]" }
+            rename => { "[iso.org.dod.internet.mgmt.mib-2.system.sysORTable.sysOREntry.sysORUpTime.1]" => "[system][sysORUpTime]" }
+            rename => { "[iso.org.dod.internet.mgmt.mib-2.system.sysObjectID.0]" => "[system][sysObjectID]" }
+            rename => { "[iso.org.dod.internet.mgmt.mib-2.system.sysServices.0]" => "[system][sysServices]" }
+            rename => { "[iso.org.dod.internet.mgmt.mib-2.system.sysName.0]" => "[system][sysName]" }
+            rename => { "[iso.org.dod.internet.mgmt.mib-2.system.sysORTable.sysOREntry.sysORIndex.1]" => "[system][sysORIndex]" }
+            rename => { "[iso.org.dod.internet.mgmt.mib-2.system.sysContact.0]" => "[system][sysContact]" }
+            rename => { "[iso.org.dod.internet.mgmt.mib-2.system.sysLocation.0]" => "[system][sysLocation]" }
+            rename => { "[iso.org.dod.internet.mgmt.mib-2.system.sysORTable.sysOREntry.sysORID.1]" => "[system][sysORID]" }
+    
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.1.0]" => "[fgSystemInfo][fgSysVersion]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.2.0]" => "[fgSystemInfo][fgSysMgmVdom]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.3.0]" => "[fgSystemInfo][fgSysCpuUsage]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.4.0]" => "[fgSystemInfo][fgSysMemUsage]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.5.0]" => "[fgSystemInfo][fgSysMemCapacity]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.6.0]" => "[fgSystemInfo][fgSysDiskUSage]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.7.0]" => "[fgSystemInfo][fgSysDiskCapacity]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.8.0]" => "[fgSystemInfo][fgSysSesCount]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.9.0]" => "[fgSystemInfo][fgSysLowMemUsage]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.10.0]" => "[fgSystemInfo][fgSysLowMemCapacity]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.11.0]" => "[fgSystemInfo][fgSysSesRate1]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.12.0]" => "[fgSystemInfo][fgSysSesRate10]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.13.0]" => "[fgSystemInfo][fgSysSesRate30]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.14.0]" => "[fgSystemInfo][fgSysSesRate60]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.15.0]" => "[fgSystemInfo][fgSysSes6Count]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.16.0]" => "[fgSystemInfo][fgSysSes6Rate1]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.17.0]" => "[fgSystemInfo][fgSysSes6Rate10]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.18.0]" => "[fgSystemInfo][fgSysSes6Rate30]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.19.0]" => "[fgSystemInfo][fgSysSes6Rate60]" }
+            rename => { "[iso.org.dod.internet.private.enterprises.12356.101.4.1.20.0]" => "[fgSystemInfo][fgSysUpTime]" }
+        }
+    
+        
+    }
+    
+    if [split_field]{
+        split {
+            field => "split_field"
+        }
+        
+
+        if [transform]=="bandwidth"{
+            mutate{
+            rename => { "[split_field][iso.org.dod.internet.mgmt.mib-2.ifMIB.ifMIBObjects.ifXTable.ifXEntry.ifName]" =>  "[bandwidth_json][labels]" }
+            rename => { "[split_field][iso.org.dod.internet.mgmt.mib-2.interfaces.ifTable.ifEntry.ifInOctets]" =>  "[bandwidth_json][in]" }
+            rename => { "[split_field][iso.org.dod.internet.mgmt.mib-2.interfaces.ifTable.ifEntry.ifOutOctets]" =>  "[bandwidth_json][out]" }
+            rename => { "[split_field][iso.org.dod.internet.mgmt.mib-2.ifMIB.ifMIBObjects.ifXTable.ifXEntry.ifLinkUpDownTrapEnable]" =>  "[bandwidth_json][UpDown]" }
+            }
+        }
+        
+
+        mutate{
+        remove_field => ["split_field"]
+        }
+    }
+
+}
+
+
+output {
+
+    #elasticsearch {
+    #    hosts => ["https://1a73070e08904a8d842d7b43e7be8c1f.us-east-1.aws.found.io:9243"]
+    #    user => "userElastic"
+    #    password => "passwordElastic"
+    #    index => "testsnmp-write"
+    #}
+
+    pipeline {
+        send_to => "supra-filter"
+    }
+
+}
