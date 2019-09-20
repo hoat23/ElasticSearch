@@ -1,0 +1,293 @@
+{
+
+    "metadata" : {
+      "whatsapp" : {
+        "recipients" : [
+          "+51982169331"
+        ]
+      },
+      "idx_pattern" : "snmp-group01-write",
+      "name" : "cpu overload yanbal",
+      "client" : "YANBAL",
+      "rule" : {
+        "severity" : 9,
+        "name" : "Network CPU Critical",
+        "description" : "Network CPU critical overload a threshold",
+        "thershold" : {
+          "field" : "fgSystemInfo.fgSysCpuUsage",
+          "percentage_value" : 80,
+          "description" : "Launch alert when [ field >= value ]",
+          "value" : 80
+        },
+        "enabled" : [
+          "whatsapp"
+        ]
+      },
+      "window" : "10m",
+      "xpack" : {
+        "type" : "json"
+      },
+      "email" : {
+        "recipients" : [
+          "deiner.zapata@midominio.com.pe"
+        ],
+        "format" : {
+          "unidades" : {
+            "character" : " "
+          }
+        }
+      }
+    },
+    "trigger" : {
+      "schedule" : {
+        "interval" : "5m"
+      }
+    },
+    "input" : {
+      "chain" : {
+        "inputs" : [
+          {
+            "CHAIN_FIRST" : {
+              "search" : {
+                "request" : {
+                  "search_type" : "query_then_fetch",
+                  "indices" : [
+                    "snmp-group01-write"
+                  ],
+                  "rest_total_hits_as_int" : true,
+                  "body" : {
+                    "query" : {
+                      "bool" : {
+                        "filter" : [
+                          {
+                            "range" : {
+                              "@timestamp" : {
+                                "from" : "now-{{ctx.metadata.window}}"
+                              }
+                            }
+                          },
+                          {
+                            "exists" : {
+                              "field" : "cmdb.reporting_ip"
+                            }
+                          },
+                          {
+                            "exists" : {
+                              "field" : "{{ctx.metadata.rule.thershold.field}}"
+                            }
+                          },
+                          {
+                            "term" : {
+                              "cmdb.client" : "{{ctx.metadata.client}}"
+                            }
+                          },
+                          {
+                            "range" : {
+                              "{{ctx.metadata.rule.thershold.field}}" : {
+                                "gt" : "{{ctx.metadata.rule.thershold.value}}"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "aggregations" : {
+                      "num_devices_down" : {
+                        "cardinality" : {
+                          "field" : "cmdb.reporting_ip"
+                        }
+                      },
+                      "group_by_ip" : {
+                        "terms" : {
+                          "field" : "cmdb.reporting_ip",
+                          "size" : 100
+                        },
+                        "aggs" : {
+                          "count_over_threshold" : {
+                            "filter" : {
+                              "range" : {
+                                "{{ctx.metadata.rule.thershold.field}}" : {
+                                  "gte" : "{{ctx.metadata.rule.thershold.value}}"
+                                }
+                              }
+                            }
+                          },
+                          "count_under_threshold" : {
+                            "filter" : {
+                              "range" : {
+                                "{{ctx.metadata.rule.thershold.field}}" : {
+                                  "lt" : "{{ctx.metadata.rule.thershold.value}}"
+                                }
+                              }
+                            }
+                          },
+                          "percentage" : {
+                            "bucket_script" : {
+                              "buckets_path" : {
+                                "d_down" : "count_over_threshold._count",
+                                "d_up" : "count_under_threshold._count"
+                              },
+                              "script" : """
+                                                  //double total = (params.d_down + params.d_up);
+                                                  double total = 11;
+                                                  return (params.d_down * 100 ) / total;
+"""
+                            }
+                          }
+                        }
+                      },
+                      "clientes" : {
+                        "terms" : {
+                          "field" : "cmdb.client",
+                          "size" : 100
+                        },
+                        "aggs" : {
+                          "sedes" : {
+                            "terms" : {
+                              "field" : "cmdb.sede",
+                              "size" : 100
+                            },
+                            "aggs" : {
+                              "ip_s" : {
+                                "terms" : {
+                                  "field" : "cmdb.reporting_ip",
+                                  "size" : 100
+                                },
+                                "aggs" : {
+                                  "count_over_threshold" : {
+                                    "filter" : {
+                                      "range" : {
+                                        "{{ctx.metadata.rule.thershold.field}}" : {
+                                          "gte" : "{{ctx.metadata.rule.thershold.value}}"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "count_under_threshold" : {
+                                    "filter" : {
+                                      "range" : {
+                                        "{{ctx.metadata.rule.thershold.field}}" : {
+                                          "lt" : "{{ctx.metadata.rule.thershold.value}}"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "percentage" : {
+                                    "bucket_script" : {
+                                      "buckets_path" : {
+                                        "d_down" : "count_over_threshold._count",
+                                        "d_up" : "count_under_threshold._count"
+                                      },
+                                      "script" : """
+                                                              //double total = (params.d_down + params.d_up);
+                                                              double total = 11;
+                                                              return (params.d_down * 100 ) / total;
+"""
+                                    }
+                                  },
+                                  "global_info" : {
+                                    "top_hits" : {
+                                      "sort" : [
+                                        {
+                                          "@timestamp" : {
+                                            "order" : "desc"
+                                          }
+                                        }
+                                      ],
+                                      "_source" : {
+                                        "includes" : [
+                                          "cmdb",
+                                          "elk",
+                                          "{{ctx.metadata.rule.thershold.field}}",
+                                          "@timestamp"
+                                        ]
+                                      },
+                                      "size" : 12
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "sort" : [
+                      {
+                        "@timestamp" : {
+                          "order" : "desc"
+                        }
+                      }
+                    ],
+                    "size" : 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "condition" : {
+      "script" : {
+        "source" : "        return ctx.payload.CHAIN_FIRST.aggregations.group_by_ip.buckets.stream().filter( t->t.percentage.value > ctx.metadata.rule.thershold.percentage_value).count() > 0;",
+        "lang" : "painless"
+      }
+    },
+    "actions" : {
+      "post_webhook" : {
+        "condition" : {
+          "script" : {
+            "source" : "            //desabilitado, es para uso futuro...en integración con otras plataformas\n            return false",
+            "lang" : "painless"
+          }
+        },
+        "webhook" : {
+          "scheme" : "http",
+          "host" : "54.208.72.130",
+          "port" : 3002,
+          "method" : "post",
+          "path" : "/bypass",
+          "params" : {
+            "watch_id" : "{{ctx.watch_id}}"
+          },
+          "headers" : {
+            "Content-Type" : "application/json"
+          },
+          "body" : "{{#toJson}}ctx{{/toJson}}"
+        }
+      },
+      "email_admin" : {
+        "throttle_period_in_millis" : 1800000,
+        "email" : {
+          "profile" : "standard",
+          "to" : [
+            "deiner.zapata@midominio.com.pe"
+          ],
+          "subject" : "{{ctx.metadata.client}} - {{ctx.metadata.rule.name}}",
+          "body" : {
+            "html" : """
+<h2>{{ctx.metadata.rule.name}}</h2>
+
+<p>There are {{ctx.payload.aggregations.num_device_by_ip.value}} devices over <b>{{ctx.metadata.rule.thershold.value}}% ({{ctx.metadata.rule.thershold.field}})</b>.</p>
+<br/>
+<ul>{{#ctx.payload.CHAIN_FIRST.aggregations.clientes.buckets}}
+    <li><b>{{key}}</b></li>{{#sedes.buckets}}
+    <ul>{{#ip_s.buckets}}
+        <li>
+            <b>SEDE:</b> {{global_info.hits.hits.0._source.cmdb.sede}},
+            <b>IP</b>: {{global_info.hits.hits.0._source.cmdb.reporting_ip}},
+            <b>Categoria:</b> {{global_info.hits.hits.0._source.cmdb.categoria}},
+            <b>Cluster Name:</b> {{global_info.hits.hits.0._source.cmdb.cluster_name}},
+            <b>Docs over threshold:</b> {{count_over_threshold.doc_count}}{{ctx.metadata.email.format.unidades.character}}
+        </li>
+        {{/ip_s.buckets}}
+    </ul>{{/sedes.buckets}}
+    {{/ctx.payload.CHAIN_FIRST.aggregations.clientes.buckets}}
+</ul>
+"""
+          }
+        }
+      }
+    }
+  }
