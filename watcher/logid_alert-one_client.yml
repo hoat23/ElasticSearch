@@ -1,0 +1,241 @@
+POST _watcher/watch/logid_alert-testing
+{
+    "trigger" : {
+      "schedule" : {
+        "interval" : "5m"
+      }
+    },
+    "input" : {
+      "chain" : {
+        "inputs" : [
+          {
+            "CHAIN_FIRST" : {
+              "search" : {
+                "request" : {
+                  "search_type" : "query_then_fetch",
+                  "indices" : [
+                    "syslog-group*-write"
+                  ],
+                  "rest_total_hits_as_int" : true,
+                  "body" : {
+                    "query" : {
+                      "bool" : {
+                        "must" : [
+                          {"range" : {"@timestamp" : {"from" : "now-10m"}}},
+                          {"exists" : {"field" : "logid_json.messageid"}},
+                          {"exists" : {"field" : "logid_json.message"}},
+                          {"term" : {"cmdb.client" : "{{ctx.metadata.client}}"}}
+                        ],
+                        "should" : [
+                          {"term" : {"logid_json.messageid.keyword" : "22011"}},
+                          {"term" : {"logid_json.messageid.keyword" : "22012"}},
+                          {"term" : {"logid_json.messageid.keyword" : "22802"}},
+                          {"term" : {"logid_json.messageid.keyword" : "22803"}},
+                          {"term" : {"logid_json.messageid.keyword" : "39952"}},
+                          {"term" : {"logid_json.messageid.keyword" : "39953"}}
+                        ],
+                        "minimum_should_match" : 1
+                      }
+                    },
+                    "aggregations" : {
+                      "num_incidents" : {
+                        "cardinality" : {"field" : "logid_json.messageid.keyword"}
+                      },
+                      "group_by_ip" : {
+                        "terms" : {
+                          "field" : "cmdb.reporting_ip",
+                          "size" : 100,
+                          "min_doc_count" : 1
+                        },
+                        "aggs" : {
+                          "group_by_type" : {
+                            "cardinality" : {
+                              "field" : "logid_json.message.keyword"
+                            }
+                          }
+                        }
+                      },
+                      "clientes" : {
+                        "terms" : {
+                          "field" : "cmdb.client",
+                          "size" : 100,
+                          "min_doc_count" : 1
+                        },
+                        "aggs" : {
+                          "sedes" : {
+                            "terms" : {
+                              "field" : "cmdb.sede",
+                              "size" : 100,
+                              "min_doc_count" : 1
+                            },
+                            "aggs" : {
+                              "ip_s" : {
+                                "terms" : {
+                                  "field" : "cmdb.reporting_ip",
+                                  "size" : 100
+                                },
+                                "aggs" : {
+                                  "incidents" : {
+                                    "terms" : {
+                                      "field" : "logid_json.messageid.keyword",
+                                      "size" : 100
+                                    },
+                                    "aggs" : {
+                                      "global_info" : {
+                                        "top_hits" : {
+                                          "sort" : [{"@timestamp" : {"order" : "desc"}}],
+                                          "_source" : {
+                                            "includes" : [
+                                              "cmdb",
+                                              "elk",
+                                              "logid_json",
+                                              "@timestamp"
+                                            ]
+                                          },
+                                          "size" : 1
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "sort" : [
+                      {
+                        "@timestamp" : {
+                          "order" : "desc"
+                        }
+                      }
+                    ],
+                    "size" : 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "condition" : {
+      "script" : {
+        "source" : "return ctx.payload.CHAIN_FIRST.aggregations.group_by_ip.buckets.stream().filter(t->t.group_by_type.value>0).count() > 0",
+        "lang" : "painless"
+      }
+    },
+    "actions" : {
+      "post_webhook" : {
+        "condition" : {
+          "script" : {
+            "source" : "return false;",
+            "lang" : "painless"
+          }
+        },
+        "webhook" : {
+          "scheme" : "http",
+          "host" : "8.8.8.8",
+          "port" : 3002,
+          "method" : "post",
+          "path" : "/bypass",
+          "params" : {
+            "watch_id" : "{{ctx.watch_id}}"
+          },
+          "headers" : {
+            "Content-Type" : "application/json"
+          },
+          "body" : "{{#toJson}}ctx{{/toJson}}"
+        }
+      },
+      "email_admin" : {
+        "throttle_period_in_millis" : 1800000,
+        "email" : {
+          "profile" : "standard",
+          "to" : [
+            "deiner.zapata@midominio.com.pe"
+          ],
+          "subject" : "{{ctx.metadata.client}} - {{ctx.metadata.rule.name}}",
+          "body" : {
+            "html" : """
+<h2>{{ctx.metadata.rule.name}}</h2>
+
+<p>There are {{ctx.payload.CHAIN_FIRST.aggregations.incidents.value}} detected.</p>
+<br/>
+<ul>{{#ctx.payload.CHAIN_FIRST.aggregations.clientes.buckets}}
+    <li><b>{{key}}</b></li>
+      <ul>{{#sedes.buckets}}
+        <li><b>SEDE: {{key}}</b></li>
+          <ul>{{#ip_s.buckets}}
+              <li><b>IP: {{key}}</b></li>
+              <ul>{{#incidents.buckets}}
+                <li>
+                    <b>SEDE:</b>{{global_info.hits.hits.0._source.cmdb.sede}},
+                    <b>IP  :</b>{{global_info.hits.hits.0._source.cmdb.reporting_ip}},
+                    <b>ID:</b>{{global_info.hits.hits.0._source.logid_json.messageid}},
+                    <b>Message  :</b>{{global_info.hits.hits.0._source.logid_json.message}}
+                </li>
+                {{/incidents.buckets}}
+              </ul>
+              {{/ip_s.buckets}}
+          </ul>
+        {{/sedes.buckets}}
+      </ul>
+    {{/ctx.payload.CHAIN_FIRST.aggregations.clientes.buckets}}
+</ul>
+"""
+          }
+        }
+      }
+    },
+    "metadata" : {
+      "whatsapp" : {
+        "bypass" : {
+          "url" : "http://d0bbab90.ngrok.io"
+        },
+        "recipients" : [
+          "+51982169331"
+        ]
+      },
+      "idx_pattern" : "snmp-group01-write",
+      "name" : "LOGID match detected.",
+      "client" : "YANBAL",
+      "rule" : {
+        "severity" : 9,
+        "name" : "Network LOGID match detected.",
+        "description" : "Match with a logid number.",
+        "thershold" : {
+          "field" : "logid_json.messageid.keyword",
+          "values" : [
+            "22011",
+            "22012",
+            "22802",
+            "22803",
+            "39952",
+            "39953",
+            "22011"
+          ],
+          "description" : "Detect a match with a list of logid number in syslog index [22011 only for test]"
+        },
+        "enabled" : [
+          "whatsapp"
+        ]
+      },
+      "window" : "10m",
+      "xpack" : {
+        "type" : "json"
+      },
+      "email" : {
+        "throttle_period_in_millis" : 1800000,
+        "recipients" : [
+          "deiner.zapata@midominio.com.pe"
+        ],
+        "format" : {
+          "unidades" : {
+            "character" : " "
+          }
+        }
+      }
+    }
+  }
