@@ -73,5 +73,5 @@ GET _template/my_index-template
 
 ### Realizar Rollover para que el nuevo indice creado se genere con las politicas ILM respectivas
 ```
-PUT my_index-alias_write/_rollover
+POST my_index-alias_write/_rollover
 ```
