@@ -1,0 +1,126 @@
+{
+  "trigger" : {
+  },
+  "input" : {
+  },
+  "condition" : {
+  },
+  "actions" : {
+    "post_webhook" : {
+        "condition" : {
+          "script" : {
+            "source" : "return false;",
+            "lang" : "painless"
+          }
+        },
+        "webhook" : {
+          "scheme" : "http",
+          "host" : "8.8.8.8",
+          "port" : 3002,
+          "method" : "post",
+          "path" : "/bypass",
+          "params" : {
+            "watch_id" : "{{ctx.watch_id}}"
+          },
+          "headers" : {
+            "Content-Type" : "application/json"
+          },
+          "body" : "{{#toJson}}ctx{{/toJson}}"
+        }
+      },
+    "post_whatssapp01" : {
+      "condition" : {
+        "script" : {
+          "source" : "return false;",
+          "lang" : "painless"
+        }
+      },
+      "webhook" : {
+        "scheme" : "https",
+        "host" : "api.twilio.com",
+        "port" : 443,
+        "method" : "post",
+        "path" : "/2010-04-01/Accounts/D4L3161z3cA1114nAz/Messages.json",
+        "params" : { },
+        "headers" : {
+          "Content-Type" : "application/x-www-form-urlencoded"
+        },
+        "auth" : {
+          "basic" : {
+            "username" : "D4L3161z3cA1114nAz",
+            "password" : "::es_redacted::"
+          }
+        },
+        "body" : "Body={{ctx.metadata.rule.name}}{{#ctx.payload.CHAIN_FIRST.aggregations.clientes.buckets}}%0A    {{key}}%0A    {{#sedes.buckets}}%0A      {{#ip_s.buckets}}%0A            SEDE: {{global_info.hits.hits.0._source.cmdb.sede}},%0A            IP: {{global_info.hits.hits.0._source.cmdb.reporting_ip}},%0A            Categoria: {{global_info.hits.hits.0._source.cmdb.categoria}},%0A            Cluster Name: {{global_info.hits.hits.0._source.cmdb.cluster_name}},%0A            Docs over threshold: {{count_over_threshold.doc_count}}{{ctx.metadata.email.format.unidades.character}}%0A        {{/ip_s.buckets}}%0A    {{/sedes.buckets}}%0A{{/ctx.payload.CHAIN_FIRST.aggregations.clientes.buckets}}&To=whatsapp%3A%2B51{{ctx.metadata.whatsapp.recipients.0}}&From=whatsapp%3A%2B14123233232"
+      }
+    },
+    "post_whatssapp02" : {
+      "condition" : {
+        "script" : {
+          "source" : "return false;",
+          "lang" : "painless"
+        }
+      },
+      "webhook" : {
+        "scheme" : "https",
+        "host" : "api.twilio.com",
+        "port" : 443,
+        "method" : "post",
+        "path" : "/2010-04-01/Accounts/D4L3161z3cA1114nAz/Messages.json",
+        "params" : { },
+        "headers" : {
+          "Content-Type" : "application/x-www-form-urlencoded"
+        },
+        "auth" : {
+          "basic" : {
+            "username" : "D4L3161z3cA1114nAz",
+            "password" : "::es_redacted::"
+          }
+        },
+        "body" : "Body={{ctx.metadata.rule.name}}{{#ctx.payload.CHAIN_FIRST.aggregations.clientes.buckets}}%0A{{key}}%0A    {{#sedes.buckets}}%0A    SEDE: {{key}}{{#ip_s.buckets}}%0A        IP: {{global_info.hits.hits.0._source.cmdb.reporting_ip}},%0A        Categoria: {{global_info.hits.hits.0._source.cmdb.categoria}},%0A        Cluster Name: {{global_info.hits.hits.0._source.cmdb.cluster_name}},%0A        Docs over threshold: {{count_over_threshold.doc_count}}{{ctx.metadata.email.format.unidades.character}}%0A    {{/ip_s.buckets}}{{/sedes.buckets}}%0A{{/ctx.payload.CHAIN_FIRST.aggregations.clientes.buckets}}&To=whatsapp%3A%2B51{{ctx.metadata.whatsapp.recipients.0}}&From=whatsapp%3A%2B14123233232"
+      }
+    }
+  },
+  "metadata" : {
+    "whatsapp" : {
+      "bypass" : {
+        "url" : "http://d0bbab90.ngrok.io"
+      },
+      "recipients" : [
+        "982169331"
+      ]
+    },
+    "idx_pattern" : "snmp-group01-write",
+    "name" : "cpu overload yanbal",
+    "client" : "YANBAL",
+    "rule" : {
+      "severity" : 9,
+      "name" : "Network CPU Critical",
+      "description" : "Network CPU critical overload a threshold",
+      "thershold" : {
+        "field" : "fgSystemInfo.fgSysCpuUsage",
+        "percentage_value" : 80,
+        "description" : "Launch alert when [ field >= value ]",
+        "value" : 10
+      },
+      "enabled" : [
+        "whatsapp"
+      ]
+    },
+    "window" : "10m",
+    "xpack" : {
+      "type" : "json"
+    },
+    "email" : {
+      "throttle_period_in_millis" : 1800000,
+      "recipients" : [
+        "deiner.zapata@midominio.com.pe"
+      ],
+      "format" : {
+        "unidades" : {
+          "character" : " "
+        }
+      }
+    }
+  }
+}
