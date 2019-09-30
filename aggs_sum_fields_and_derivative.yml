@@ -1,0 +1,73 @@
+GET snmp-*/_search
+{
+  "query": {
+    "bool": {
+      "filter": [
+        {"range": {"@timestamp": {"gt": "now-5m"}}},
+        {"exists": {"field": "fwnWanEntry.fwnWanDescr"}},
+        {"term": {"fwnWanEntry.fwnWanDescr": "WAN 1"}}
+        ],
+      "should": [
+        {"exists": {"field": "fwnWanEntry.fwnWanInOctets64"}},
+        {"exists": {"field": "fwnWanEntry.fwnWanOutOctets64"}}
+        ]
+    }
+  }, 
+  "size": 0,
+  "aggs": {
+    "IP": {
+      "terms": {
+        "field": "cmdb.reporting_ip",
+        "size": 100
+      },
+      "aggs": {
+        "LABEL":{
+          "terms": {
+            "field": "fwnWanEntry.fwnWanDescr",
+            "size": 10
+          },
+          "aggs": {
+            "temp": {
+              "date_histogram": {
+                "field": "@timestamp",
+                "calendar_interval": "1m"
+              },
+              "aggs": {
+                "Y1": {
+                  "max": {"field": "fwnWanEntry.fwnWanInOctets64"}
+                },
+                "Y2": {
+                  "max": {"field": "fwnWanEntry.fwnWanOutOctets64"}
+                },
+                "Y": {
+                  "bucket_script": {
+                    "buckets_path": {
+                      "Y1": "Y1",
+                      "Y2": "Y2"
+                    },
+                    "script": "params.Y1 + params.Y2"
+                  }
+                },
+                "dY": {
+                  "derivative": {
+                    "buckets_path": "Y",
+                    "unit": "minute"
+                  }
+                },
+                "bandwidth": {
+                  "bucket_script": {
+                    "buckets_path": {
+                      "rate": "dY"
+                    },
+                    "script": "params.rate *8/20/10485760"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "sort": [{"@timestamp": {"order": "desc"}}]
+}
