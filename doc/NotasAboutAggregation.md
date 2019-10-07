@@ -29,4 +29,14 @@ AAAA  = [ "key": "<name_repor_ip>" , "doc_count": 12, "monitor_status": ["bucket
 BBBBx = "AAAA.monitor_status.buckets"
 G_INFO= "AAAA.global_info.hits.hits.0"
 ```
- 
+
+### Derivate
+```
+[temp := date_histogram(date , calendar_interval=month)]
+  [monthly := avr(temp)]
+  [d_monthly := derivative(monthly)]
+
+[sales_per_month := date_histogram(date , calendar_interval=month)]
+  [sales := sum(price)]
+  [sales_derivate := derivative( bucket_path=sales , unit=day)]
+```
