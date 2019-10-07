@@ -20,3 +20,6 @@ PUT /_cluster/settings
 	}
 }
 ```
+
+
+Miscellaneaous cluster settings: https://www.elastic.co/guide/en/elasticsearch/reference/7.4/misc-cluster.html#persistent-tasks-allocation
