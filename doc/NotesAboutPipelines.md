@@ -74,3 +74,6 @@ if [cmdb][reporting_ip] = /(^192\.168\.([0-9]|[0-9][0-9]|[0-2][0-5][0-5])\.([0-9
    }
 }
 ```
+### SNMP
+
+Link: http://www.oidview.com/download_oidview.html
