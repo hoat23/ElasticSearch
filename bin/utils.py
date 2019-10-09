@@ -2,7 +2,7 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 30/11/2018
-# Last update: 04/07/2019
+# Last update: 09/10/2019
 # Description: Codigo util, para uso general
 # sys.setdefaultencoding('utf-8') #reload(sys)
 # hash      -> hashlib https://recursospython.com/guias-y-manuales/hashlib-md5-sha/
@@ -561,6 +561,33 @@ def load_template(template, save_file=False, name_save_template="template_render
     finally:
         return output
 #######################################################################################
+#https://python-para-impacientes.blogspot.com/2015/09/explorando-directorios-con-listdir-walk.html
+def list_directorio():
+    for base, dirs, files in os.walk('*'):
+        print(base)
+    return
+#######################################################################################
+def isvalidip(string_ip):
+    """
+    https://www.geeksforgeeks.org/python-program-to-validate-an-ip-address/
+    Testig code:
+        isvalidip("192.168.0.1") -> True
+    """
+    regex = '''^(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\.( 
+                25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\.( 
+                25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\.( 
+                25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)'''
+    # pass the regular expression and the string in search() method 
+    if(re.search(regex, string_ip)):  
+        rpt = True
+    else:  
+        rpt = False
+    
+    print("isvalidip | rpt= {0} | {1} ".format(rpt, string_ip))
+
+    return False
+#######################################################################################
 if __name__ == "__main__":
     #Testing function
-    test_hmac_json()
+    #test_hmac_json()
+    list_directorio
