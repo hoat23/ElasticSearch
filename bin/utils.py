@@ -570,6 +570,7 @@ def list_directorio():
 def isvalidip(string_ip):
     """
     https://www.geeksforgeeks.org/python-program-to-validate-an-ip-address/
+    https://www.regular-expressions.info/ip.html
     Testig code:
         isvalidip("192.168.0.1") -> True
     """
