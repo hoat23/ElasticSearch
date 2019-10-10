@@ -532,7 +532,7 @@ def download_files_from_github(list_files_to_download):
         elif get_type_so()=="linux":
             par1 = "wget"
         else:
-            print("[ERROR] download_files_from_github | SO = {0}".format(get_type_so()))
+            print("[ERROR] download_filndpoies_from_github | SO = {0}".format(get_type_so()))
             return 
         command = "{0} {1} -O {2}".format(par1, full_path, only_name_file)
         rpt = os.system(command)
@@ -583,13 +583,39 @@ def isvalidip(string_ip):
     if(re.search(regex, string_ip)):  
         rpt = True
     else:  
-        rpt = False
-    
-    print("isvalidip | rpt= {0} | {1} ".format(rpt, string_ip))
+        rpt = False    
+    #print("isvalidip | rpt= {0} | {1} ".format(rpt, string_ip))
+    return rpt
+#######################################################################################
+def validate_data_type(temp_json, fields_to_validate):
+    '''
+    temp_json = {
+        "only_a_key_01": "value_to_eval_01",
+        "only_a_key_02": "value_to_eval_02", ...
+    }
 
-    return False
+    fields_to_validate = {
+        "type_key": [ "only_a_key_01" , "only_a_key_02", ...]
+    }
+
+    type_key      : type of data.
+    only_a_key_01 : name of field in json.
+    '''
+    for type_key in fields_to_validate.keys():
+        if type_key == "ip":
+            for only_a_key in fields_to_validate[type_key]:
+                try:
+                    value_to_eval = temp_json[only_a_key]
+                    if isvalidip(value_to_eval):
+                        pass
+                    else:
+                        print("validate_data_type |ERROR| Value for {0} is {1} not type {2}".format(only_a_key, value_to_eval, type_key))
+                except:
+                    print("validate_data_type |WARN | key {0} not found in json data.".format(only_a_key))
+    return temp_json
 #######################################################################################
 if __name__ == "__main__":
     #Testing function
     #test_hmac_json()
-    list_directorio
+    list_directorio()
+
