@@ -77,3 +77,14 @@ if [cmdb][reporting_ip] = /(^192\.168\.([0-9]|[0-9][0-9]|[0-2][0-5][0-5])\.([0-9
 ### SNMP
 
 Link: http://www.oidview.com/download_oidview.html
+
+
+#### Conditionals in pipelines
+
+```
+if !( [field1] and [field2] and [field3] ) {
+   # Add your code
+}else{
+   drop {}
+}
+```
