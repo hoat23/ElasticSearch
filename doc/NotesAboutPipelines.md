@@ -88,3 +88,9 @@ if !( [field1] and [field2] and [field3] ) {
    drop {}
 }
 ```
+#### CONVERT DICTIONARY .MIB TO .DIC
+
+```
+smidump -p FORTINET-CORE-MIB.mib --level=1 -k -f python FORTINET-FORTIGATE-MIB.mib
+```
+
