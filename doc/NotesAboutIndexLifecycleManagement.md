@@ -6,14 +6,14 @@
 PUT my_index-000001
 {
   "aliases": {
-    "my_index-\*\*alias_write\*\*: {}
+    "my_index-alias-write: {}
   }
 }
 ```
 
 ### Cargar datos en el indice
 ```
-PUT my_index-alias_write/_doc/1
+PUT my_index-alias-write/_doc/1
 {
   "myfield01": "myvalue01"
 }
@@ -21,7 +21,7 @@ PUT my_index-alias_write/_doc/1
 
 ### Crear politica ILM 
 ```
-PUT _ilm/policy/test-index-policy
+PUT _ilm/policy/policy_index_management
 {
   "policy": {
     "phases": {
@@ -60,8 +60,8 @@ PUT _template/my_index-template
       "number_of_shards": 4,
       "number_of_replicas": 0,
       "refresh_interval": "5s",
-      "lifecycle.name": "my_index_policy",
-      "lifecycle.rollover_alias": "my_index-alias_write"
+      "lifecycle.name": "policy_index_management",
+      "lifecycle.rollover_alias": "my_index-alias-write"
     }
   }
 }
@@ -73,5 +73,5 @@ GET _template/my_index-template
 
 ### Realizar Rollover para que el nuevo indice creado se genere con las politicas ILM respectivas
 ```
-POST my_index-alias_write/_rollover
+POST my_index-alias-write/_rollover
 ```
