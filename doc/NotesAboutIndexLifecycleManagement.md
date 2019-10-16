@@ -75,3 +75,13 @@ GET _template/my_index-template
 ```
 POST my_index-alias-write/_rollover
 ```
+
+### Linkear un indice antiguo con una politica ILM
+```
+PUT my_index-000023/_settings
+{
+  "index": {
+     "lifecycle.name": "policy_index_management"
+  }
+}
+```
