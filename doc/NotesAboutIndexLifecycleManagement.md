@@ -6,7 +6,7 @@
 PUT my_index-000001
 {
   "aliases": {
-    "my_index-**alias_write**: {}
+    "my_index-\*\*alias_write\*\*: {}
   }
 }
 ```
