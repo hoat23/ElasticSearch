@@ -162,4 +162,5 @@ McAffe info: https://kc.mcafee.com/corporate/index?page=content&id=KB87927&snspd
 
 Parsing xml to json: https://codeday.me/es/qa/20190429/594352.html
 
+More info parsing: https://www.front2backdev.com/2015/08/26/pulling-and-splitting-live-xml/
 
