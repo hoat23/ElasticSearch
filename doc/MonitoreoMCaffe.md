@@ -4,7 +4,17 @@
 
 ### Configuration of input tcp in Logstash
 
-#### Generate SSL.X509 using OpenSSL
+#### Generate Certificate SSL X509 using OpenSSL
+
+First install OpenSSL in your server and validate:
+```
+openssl --version
+```
+Execute this command:
+
+```
+openssl req -newkey rsa:2048 -nodes -keyout /etc/owner_certifies/syslogselfsigned.key -x509 -days 365 -out /etc/owner_certifies/syslogselfsigned.crt -config /etc/pki/tls/openssl.cnf
+```
 
 #### Configurate pipeline in Logstash
 ```
@@ -22,9 +32,23 @@ input{
 
 filter{
     
+    grok {
+        match => { "message" => '%{SYSLOG5424LINE}' }
+    }        
+    
+    mutate {
+        gsub => ["syslog5424_msg",'\"','"']
+    }
+    
+    #target => "mcaffe_json"
     xml {
-      source => "message"
-      target => "mcaffe_json"
+        source => "syslog5424_msg"
+        target => "mcaffe_json"
+        store_xml => false
+    }
+    
+    mutate {
+        remove_field => ["message"]
     }
     
 }
