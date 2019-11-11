@@ -94,3 +94,7 @@ if !( [field1] and [field2] and [field3] ) {
 smidump -p FORTINET-CORE-MIB.mib --level=1 -k -f python FORTINET-FORTIGATE-MIB.mib
 ```
 
+#### Other configurations 
+
+https://www.elastic.co/guide/en/logstash/current/event-dependent-configuration.html
+
