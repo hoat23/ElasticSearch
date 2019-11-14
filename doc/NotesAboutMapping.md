@@ -24,3 +24,17 @@ PUT my_index-000001/_mapping
   }
 }
 ```
+#Compatibility old datetime with version 7.0+
+```
+{
+  "properties": {
+    "@timestamp": {
+      "type": "date"
+    },
+    "datetime": {
+      "type": "date",
+      "format": "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+    }
+  }
+}
+```
