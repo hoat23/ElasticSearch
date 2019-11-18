@@ -1,0 +1,268 @@
+{
+    "trigger" : {
+      "schedule" : {
+        "interval" : "1m"
+      }
+    },
+    "input" : {
+      "chain" : {
+        "inputs" : [
+          {
+            "busqueda_incidencias" : {
+              "search" : {
+                "request" : {
+                  "search_type" : "query_then_fetch",
+                  "indices" : [
+                    "incidencias"
+                  ],
+                  "rest_total_hits_as_int" : true,
+                  "body" : {
+                    "size" : 0,
+                    "query" : {
+                      "match" : {
+                        "incidencia_status.value" : "open"
+                      }
+                    },
+                    "aggs" : {
+                      "servicio" : {
+                        "terms" : {
+                          "field" : "servicio",
+                          "size" : 1000
+                        },
+                        "aggs" : {
+                          "last_two_states" : {
+                            "top_hits" : {
+                              "size" : 1,
+                              "sort" : [
+                                {
+                                  "incidencia_status.last_run" : {
+                                    "order" : "desc"
+                                  }
+                                }
+                              ],
+                              "_source" : {
+                                "includes" : [
+                                  "incidencia_id",
+                                  "incidencia_status",
+                                  "cmdb",
+                                  "servicio",
+                                  "incidencia_type"
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "busqueda_alertas" : {
+              "search" : {
+                "request" : {
+                  "search_type" : "query_then_fetch",
+                  "indices" : [
+                    "alertas*"
+                  ],
+                  "rest_total_hits_as_int" : true,
+                  "body" : {
+                    "size" : 0,
+                    "query" : {
+                      "match_all" : { }
+                    },
+                    "aggs" : {
+                      "servicio" : {
+                        "terms" : {
+                          "field" : "servicio",
+                          "size" : 1000
+                        },
+                        "aggs" : {
+                          "last_two_states" : {
+                            "top_hits" : {
+                              "size" : 2,
+                              "sort" : [
+                                {
+                                  "alert_status.last_run" : {
+                                    "order" : "desc"
+                                  }
+                                }
+                              ],
+                              "_source" : {
+                                "includes" : [
+                                  "alert_id",
+                                  "alert_status",
+                                  "cmdb",
+                                  "servicio"
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "get_incidencia_id" : {
+              "search" : {
+                "request" : {
+                  "search_type" : "query_then_fetch",
+                  "indices" : [
+                    "incidencias*"
+                  ],
+                  "rest_total_hits_as_int" : true,
+                  "body" : {
+                    "size" : 1,
+                    "query" : {
+                      "match_all" : { }
+                    },
+                    "sort" : [
+                      {
+                        "incidencia_id" : {
+                          "order" : "desc"
+                        }
+                      }
+                    ],
+                    "_source" : {
+                      "includes" : "incidencia_id"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "condition" : {
+      "script" : {
+        "source" : """
+            def incidencia_type = "network_device_status";
+            def num_inci_in_index=0;
+            //Inicializando num_inci_in_index
+            try{
+              def aux = ctx.payload.get_incidencia_id.hits.hits[0]._source;
+              num_inci_in_index = aux['incidencia_id'];
+            }catch  (Exception e) {
+              num_inci_in_index = 0;
+            }
+            def array_incidencias = [];
+            def cont_new_incidencias = num_inci_in_index+1;
+            //Inicio de la evaluacion del indice "alarmas"
+            def flagTypeIncidencia = -3;
+            try {
+              for (def servicio : ctx.payload.busqueda_alertas.aggregations.servicio.buckets){
+                def idx_alarma_servicio = servicio.key;
+                def array_two_states = servicio.last_two_states.hits.hits;
+                def array_doc_id = [];
+                def alert01_state_value = "";
+                def alert02_state_value = "";
+                def inci_status_val = "";
+                def idx_alarma_cmdb = null;
+                try {
+                  alert01_state_value = array_two_states[0]._source['alert_status']['value'];
+                  idx_alarma_cmdb = array_two_states[0]._source['cmdb'];
+                  array_doc_id.add(array_two_states[0]._id);
+                  //Intentando extraer el segundo estado
+                  try{
+                    alert02_state_value = array_two_states[1]._source['alert_status']['value'];
+                    array_doc_id.add(array_two_states[1]._id);
+                  }catch (Exception e){
+                    flagTypeIncidencia = -1;
+                  }
+                }catch (Exception e){
+                  flagTypeIncidencia = -2;
+                }
+                
+                if (alert01_state_value == "down"){
+                  flagTypeIncidencia = 0; //   UP -> DOWN
+                  inci_status_val = "open";
+                }
+                if (alert01_state_value == "up" && alert02_state_value == "down"){
+                  flagTypeIncidencia = 1; // DOWN -> UP
+                  inci_status_val = "close";
+                }
+                // Inicializando "last_run" & "first_run" and "status.value" y busqueda enn incidencias
+                if (flagTypeIncidencia>=0){
+                  def inci_last_run = ctx.trigger.triggered_time.toString();
+                  def inci_first_run = inci_last_run;
+                  //---------------------------------------------------------------------------------------
+                  //Inicio busqueda en el indice "incidencias"
+                  def flagInciIdxFound = false;
+                  def idx_inci_status_first_run = ctx.trigger.triggered_time.toString();
+                  def idx_inci_id = -2;
+                  def one_inci_data = null;
+                  try{
+                    for (def idx_incidencias: ctx.payload.busqueda_incidencias.aggregations.servicio.buckets){
+                      one_inci_data = idx_incidencias.last_two_states.hits.hits[0]._source;
+                      if (idx_alarma_servicio == one_inci_data['servicio']){
+                        flagInciIdxFound = true;
+                        idx_inci_status_first_run = one_inci_data['incidencia_status']['first_run'];
+                        idx_inci_id = one_inci_data['incidencia_id'];
+                        break;
+                      }
+                    }//End forr(idx_incidencias)
+                  }catch (Exception e){
+                    //Create new inci_id
+                    flagInciIdxFound = false;
+                  }
+                  if (flagInciIdxFound==false && inci_status_val=="open"){
+                    idx_inci_id = cont_new_incidencias;
+                    cont_new_incidencias += 1;
+                  }
+                  if ((inci_status_val=="open") || (inci_status_val=="close" && flagInciIdxFound)){
+                    array_incidencias.add([
+                      "_id": idx_inci_id,
+                      "incidencia_id": idx_inci_id,
+                      "incidencia_type": incidencia_type,
+                      "array_doc_id": array_doc_id,
+                      "servicio": idx_alarma_servicio,
+                      "cmdb": idx_alarma_cmdb,
+                      "debug": [
+                        "flagInciIdxFound": flagInciIdxFound
+                        ],
+                      "incidencia_status": [
+                        "first_run": idx_inci_status_first_run,
+                        "last_run": ctx.trigger.triggered_time.toString(),
+                        "value": inci_status_val
+                        ]
+                    ]);
+                  }
+                }
+                
+              }//End for (alarmas)
+              // Cargando las incidencias en el indice
+              ctx.payload._doc = array_incidencias;
+            }catch (Exception e){
+              //ctx.payload._doc = array_dbg;
+              flagTypeIncidencia = -2;
+            }
+            return true;
+""",
+        "lang" : "painless"
+      }
+    },
+    "throttle_period_in_millis" : 1000,
+    "actions" : {
+      "index_payload" : {
+        "index" : {
+          "index" : "incidencias"
+        }
+      }
+    },
+    "metadata" : {
+      "name" : "incidencias_heartbeat",
+      "index" : "alertas",
+      "threshold" : 60,
+      "window" : "2m",
+      "xpack" : {
+        "type" : "json"
+      }
+    }
+  }

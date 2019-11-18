@@ -1,0 +1,283 @@
+{
+    "trigger" : {
+      "schedule" : {
+        "interval" : "1m"
+      }
+    },
+    "input" : {
+      "chain" : {
+        "inputs" : [
+          {
+            "busqueda_heartbeat" : {
+              "search" : {
+                "request" : {
+                  "search_type" : "query_then_fetch",
+                  "indices" : [
+                    "heartbeat-*-write"
+                  ],
+                  "rest_total_hits_as_int" : true,
+                  "body" : {
+                    "_source" : [
+                      "monitor.id",
+                      "monitor.status",
+                      "http.url",
+                      "cmdb"
+                    ],
+                    "size" : 0,
+                    "query" : {
+                      "range" : {
+                        "@timestamp" : {
+                          "gte" : "now-15m"
+                        }
+                      }
+                    },
+                    "aggs" : {
+                      "client" : {
+                        "terms" : {
+                          "field" : "cmdb.client",
+                          "size" : 1000
+                        },
+                        "aggs" : {
+                          "servicios" : {
+                            "terms" : {
+                              "field" : "cmdb.reporting_ip",
+                              "size" : 1000
+                            },
+                            "aggs" : {
+                              "status" : {
+                                "terms" : {
+                                  "field" : "monitor.status"
+                                },
+                                "aggs" : {
+                                  "latest_status" : {
+                                    "top_hits" : {
+                                      "sort" : [
+                                        {
+                                          "@timestamp" : {
+                                            "order" : "desc"
+                                          }
+                                        }
+                                      ],
+                                      "_source" : {
+                                        "includes" : [
+                                          "@timestamp",
+                                          "monitor.status",
+                                          "http.url",
+                                          "cmdb"
+                                        ]
+                                      },
+                                      "size" : 1
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "busqueda_alertas" : {
+              "search" : {
+                "request" : {
+                  "search_type" : "query_then_fetch",
+                  "indices" : [
+                    "alertas*"
+                  ],
+                  "rest_total_hits_as_int" : true,
+                  "body" : {
+                    "size" : 0,
+                    "query" : {
+                      "match_all" : { }
+                    },
+                    "aggs" : {
+                      "servicio" : {
+                        "terms" : {
+                          "field" : "servicio",
+                          "size" : 1000
+                        },
+                        "aggs" : {
+                          "latest_status" : {
+                            "top_hits" : {
+                              "sort" : [
+                                {
+                                  "alert_status.last_run" : {
+                                    "order" : "desc"
+                                  }
+                                }
+                              ],
+                              "_source" : {
+                                "includes" : [
+                                  "alert_id",
+                                  "alert_status",
+                                  "cmdb",
+                                  "servicio"
+                                ]
+                              },
+                              "size" : 1
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "get_alert_id" : {
+              "search" : {
+                "request" : {
+                  "search_type" : "query_then_fetch",
+                  "indices" : [
+                    "alertas*"
+                  ],
+                  "rest_total_hits_as_int" : true,
+                  "body" : {
+                    "size" : 1,
+                    "query" : {
+                      "match_all" : { }
+                    },
+                    "sort" : [
+                      {
+                        "alert_id" : {
+                          "order" : "desc"
+                        }
+                      }
+                    ],
+                    "_source" : {
+                      "includes" : "alert_id"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "condition" : {
+      "script" : {
+        "source" : """
+            def servicios = [];
+            def num_alertas = ctx.payload.busqueda_alertas.hits.total;
+            def new_alert_id = num_alertas;
+            if (num_alertas > 0){
+              try{
+                def aux = ctx.payload.get_alert_id.hits.hits[0]._source;
+                num_alertas = aux['alert_id'];
+              }catch  (Exception e) {
+                num_alertas=0;
+              }
+            }
+            for (def clientes: ctx.payload.busqueda_heartbeat.aggregations.client.buckets){
+              for (def servicio: clientes.servicios.buckets) {
+                def latest_up = "2000-01-01T00:00:00.000Z";
+                def latest_down = "2000-01-01T00:00:00.000Z";
+                def first_run = "2000-01-01T00:00:00.000Z";
+                def cmdb_json = null;
+                def client = "default";
+                def new_servicio = "";
+                def old_servicio = "";
+                def old_status = "";
+                def old_alertid = "";
+                for(def estado: servicio.status.buckets){
+                    def estado_source = estado.latest_status.hits.hits[0]._source;
+                    if(estado.key == "up"){
+                      latest_up = estado_source['@timestamp'];
+                    }
+                    if(estado.key == "down"){
+                      latest_down = estado_source['@timestamp'];
+                    }
+                    cmdb_json = estado_source['cmdb'];
+                    client = cmdb_json['client'];
+                }
+                
+                def sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                def latest_up_date = sdf.parse(latest_up).getTime();
+                def latest_down_date = sdf.parse(latest_down).getTime();
+                
+                def latest_state = null;
+                if(latest_up_date > latest_down_date){
+                  latest_state = "up";
+                }else{
+                  latest_state = "down";
+                }
+                //new_alert_id += 1;
+                new_servicio =  "heartbeat_"+client+"_"+servicio.key;
+                //Actualizamos o creamos una nueva alerta
+                //if (new_alert_id>1){
+                  try {
+                    for(def servicio_buckets: ctx.payload.busqueda_alertas.aggregations.servicio.buckets){
+                      old_servicio = servicio_buckets.key;
+                      def val_servicio = servicio_buckets.latest_status.hits.hits[0]._source;
+                      if (new_servicio == old_servicio){
+                        old_status = val_servicio['alert_status']['value'];
+                        old_alertid = val_servicio['alert_id'];
+                        if (latest_state == old_status){
+                          new_alert_id = old_alertid;
+                          old_status = val_servicio['alert_status']['old_value'];
+                          first_run = val_servicio['alert_status']['first_run'];
+                        }else{
+                          first_run = ctx.trigger.triggered_time.toString();
+                          num_alertas += 1;
+                          new_alert_id = num_alertas;
+                        }
+                      }
+                    }
+                  }catch  (Exception e) {
+                    new_alert_id += 1;
+                    first_run = ctx.trigger.triggered_time.toString();
+                  }
+                //}
+                //Armando documento
+                servicios.add([
+                      "_id": new_alert_id,
+                      "alert_id": new_alert_id,
+                      "alert_type": [
+                        "index": "heartbeat",
+                        "watcherid" : "alertas_heartbeat"
+                        ],
+                      "servicio": new_servicio,
+                      "alert_status": [
+                        "last_run": ctx.trigger.triggered_time.toString(),
+                        "latest_up": latest_up,
+                        "latest_down": latest_down,
+                        "first_run": first_run,
+                        "value": latest_state,
+                        "old_value": old_status
+                        ],
+                      "cmdb": cmdb_json
+                    ]);
+              }
+            }
+            ctx.payload._doc = servicios;
+            return true;
+""",
+        "lang" : "painless"
+      }
+    },
+    "throttle_period_in_millis" : 1000,
+    "actions" : {
+      "index_payload" : {
+        "index" : {
+          "index" : "alertas"
+        }
+      }
+    },
+    "metadata" : {
+      "name" : "alertas_heartbeat",
+      "index" : "heartbeat",
+      "threshold" : 60,
+      "window" : "2m",
+      "xpack" : {
+        "type" : "json"
+      }
+    }
+  }

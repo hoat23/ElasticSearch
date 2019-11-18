@@ -1,0 +1,101 @@
+{
+    "trigger" : {
+      "schedule" : {
+        "interval" : "30m"
+      }
+    },
+    "input" : {
+      "search" : {
+        "request" : {
+          "search_type" : "query_then_fetch",
+          "indices" : [
+            "incidencias*"
+          ],
+          "rest_total_hits_as_int" : true,
+          "body" : {
+            "size" : 0,
+            "query" : {
+              "range" : {
+                "incidencia_status.last_run" : {
+                  "from" : "now-2m",
+                  "to" : "now"
+                }
+              }
+            },
+            "aggs" : {
+              "incidencia_types" : {
+                "terms" : {
+                  "field" : "incidencia_type",
+                  "size" : 1000
+                },
+                "aggs" : {
+                  "clientes" : {
+                    "terms" : {
+                      "field" : "cmdb.client",
+                      "size" : 1000
+                    },
+                    "aggs" : {
+                      "cluster_name" : {
+                        "terms" : {
+                          "field" : "cmdb.cluster_name",
+                          "size" : 10
+                        },
+                        "aggs" : {
+                          "last_run" : {
+                            "top_hits" : {
+                              "size" : 100,
+                              "sort" : [
+                                {
+                                  "incidencia_status.last_run" : {
+                                    "order" : "desc"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "condition" : {
+      "compare" : {
+        "ctx.payload.hits.total" : {
+          "gt" : 0
+        }
+      }
+    },
+    "throttle_period_in_millis" : 1000,
+    "actions" : {
+      "index_payload" : {
+        "index" : {
+          "index" : "notifications"
+        }
+      },
+      "post_webhook" : {
+        "webhook" : {
+          "scheme" : "http",
+          "host" : "8.8.8.8",
+          "port" : 3009,
+          "method" : "post",
+          "path" : "/incidencias_elk",
+          "params" : { },
+          "headers" : {
+            "Content-Type" : "application/json"
+          },
+          "body" : "{{#toJson}}ctx.payload{{/toJson}}"
+        }
+      }
+    },
+    "metadata" : {
+      "xpack" : {
+        "type" : "json"
+      }
+    }
+  }
