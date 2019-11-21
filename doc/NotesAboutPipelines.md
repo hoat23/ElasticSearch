@@ -78,6 +78,11 @@ if [cmdb][reporting_ip] = /(^192\.168\.([0-9]|[0-9][0-9]|[0-2][0-5][0-5])\.([0-9
 
 Link: http://www.oidview.com/download_oidview.html
 
+#### Listener port snmptrap for logs
+
+```
+tcpdump udp -i any port 162
+```
 
 #### Conditionals in pipelines
 
