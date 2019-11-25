@@ -51,3 +51,13 @@ PUT _ingest/pipeline/reindex_metricbeat
     ]
 }
 ```
+```
+POST _template/metricbeat-7.3.0
+{
+  "order": 6,
+  "index_patterns": ["metricbeat-7.3.0*"],
+  "settings": {
+    "default_pipeline": "reindex_metricbeat"
+  }
+}
+```
