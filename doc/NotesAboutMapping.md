@@ -38,3 +38,7 @@ PUT my_index-000001/_mapping
   }
 }
 ```
+
+### Utilities
+
+http://jsfiddle.net/S2hsS/
