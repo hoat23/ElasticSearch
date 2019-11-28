@@ -1,0 +1,139 @@
+POST _watcher/watch/email_by_validate
+{
+    "trigger" : {
+      "schedule" : {"interval" : "30m"}
+    },
+    "input" : {
+      "chain" : {
+        "inputs" : [
+          {
+            "CHAIN_FIRST" : {
+              "search" : {
+                "request" : {
+                  "indices" : [
+                    ".watcher-history-*"
+                  ],
+                  "rest_total_hits_as_int" : true,
+                  "body" : {
+                    "size": 0,
+                    "query": {
+                      "bool": {
+                        "must": [
+                          {"range": {"trigger_event.triggered_time": {"gte": "now-1h"}}}
+                        ], 
+                        "must_not": [
+                          {"term": {"result.actions.status": "success"}}
+                        ],
+                        "should": [
+                          {"term": {"state": "executed"}},
+                          {"term": {"result.actions.type": "email"}}
+                        ],
+                        "minimum_should_match": 2
+                      }
+                    },
+                    "sort": [
+                    {"trigger_event.triggered_time": {"order": "desc"}}
+                    ],
+                    "aggs": {
+                      "GROUPBYID": {
+                        "terms": {
+                          "field": "watch_id",
+                          "size": 100
+                        },
+                        "aggs": {
+                          "MOREINFO": {
+                            "top_hits": {
+                              "size": 1,
+                              "_source": [
+                                "watch_id",
+                                "result.actions.error"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "condition" : {
+      "script" : {
+        "source" : """
+          return ctx.payload.CHAIN_FIRST.aggregations.GROUPBYID.buckets.stream().filter(
+                  t->t.MOREINFO.hits.total>0).count() > 0
+          """,
+        "lang" : "painless"
+      }
+    },
+    "actions" : {
+      "email_admin" : {
+        "throttle_period_in_millis" : 1800000,
+        "email" : {
+          "to" : [
+            "deiner.zapata@supra.com.pe"
+          ],
+          "subject" : "{{ctx.metadata.client}} - {{ctx.metadata.rule.name}}",
+          "body" : {
+            "html" : """
+<h2>{{ctx.metadata.rule.name}}</h2>
+
+<p>There are {{ctx.payload.CHAIN_FIRST.aggregations.incidents.value}} detected.</p>
+<br/>
+<ul>{{#ctx.payload.CHAIN_FIRST.aggregations.GROUPBYID.buckets}}
+    <li>Watch ID: <b>{{key}}</b></li>
+        <ul>
+            <li>
+                <b>ERROR:</b>{{MOREINFO.hits.hits.0._source.result.actions.0.error.reason}},
+            </li>
+        </ul>
+    {{/ctx.payload.CHAIN_FIRST.aggregations.GROUPBYID.buckets}}
+</ul>
+"""
+          },
+          "attachments" : {
+            "data.yml": {
+              "data": {
+                "body": "{{#toJson}}ctx.payload{{/toJson}}",
+                "format": "yaml"
+              }
+            }
+          }
+        }
+      }
+    },
+    "metadata" : {
+      "whatsapp" : {
+        "bypass" : {
+          "url" : "http://d0bbab90.ngrok.io"
+        },
+        "recipients" : [
+          "+51982169331"
+        ]
+      },
+      "idx_pattern" : "snmp-group01-write",
+      "name" : "EMAIL BY VALIDATE",
+      "client" : "SUPRA",
+      "rule" : {
+        "severity" : 9,
+        "name" : "EMAIL VALIDATION ERROR",
+        "description" : "No description.",
+        "thershold" : {
+          "field" : " ",
+          "values" : [ ],
+          "description" : "No description."
+        },
+        "enabled" : [
+          "whatsapp"
+        ]
+      },
+      "window" : "10m",
+      "xpack" : {
+        "type" : "json"
+      }
+    }
+  }
