@@ -1,5 +1,23 @@
 ### Differences between Input and Chain-Input
 
+#### CREATE , EXECUTE AND DISABLE WATCHER
+
+```
+PUT _watcher/watch/my_watcher
+{
+  ...
+}
+```
+
+```
+PUT _watcher/watch/my_watcher/_execute
+```
+
+```
+PUT _watcher/watch/my_watcher/_deactivate
+PUT _watcher/watch/my_watcher/_activate
+```
+
 #### INPUT SIMPLE
 path_to_first_aggregation: ctx.payload.aggregations.[NAME_FIRST_AGGREGATION]
 ```
@@ -23,7 +41,7 @@ path_to_first_aggregation: ctx.payload.CHAIN_FIRST.aggregations.[NAME_FIRST_AGGR
     }
 }
 ```
-#### WEBHOOK - SENDING MESSAGE TO MOBILE DEVICES USING TWILIO-API
+#### OUTPUT - WEBHOOK - SENDING MESSAGE TO MOBILE DEVICES USING TWILIO-API
 In the documentation of twilio, can get the command curl to send message to cellphone, in this case "Whatssapp Application".
 ```
 curl -X POST 'https://api.twilio.com/2010-04-01/Accounts/D4L3161z3cA1114nAz/Messages.json' -u myUserIDTwilio:myPasswordTwilio 
