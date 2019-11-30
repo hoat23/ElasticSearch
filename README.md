@@ -1,4 +1,18 @@
-# Python-Elastic
+# Elasticsearch
+
+Elastic Support Matrix at https://www.elastic.co/support/matrix. The installation instructions for all the supported platforms can be found in the Installing Elasticsearch documentation https://www.elastic.co/guide/en/elasticsearch/reference/7.0/install-elasticsearch.html
+
+## Elasticsearch configuration JVM heap size
+´´´
+# Xms represents the initial size of total heap space
+# Xmx represents the maximum size of total heap space
+-Xms1g
+-Xmx1g
+´´´
+You rarely need to change the Java Virtual Machine (JVM) options unless the Elasticsearch server is moved to production. These settings can be used to improve performance. When configuring heap memory, please keep in mind that the Xmx setting is 32 GB at most, and no more than 50% of the available RAM.
+
+# Python-Elasticsearch
+
 Code to upload, download or process data in Elasticsearh
 
 ## Descripción:
