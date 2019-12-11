@@ -135,6 +135,9 @@ Command for running service in PowerShell
 PS C:\logstash> .\bin\logstash.bat -f .\conf\logstash.yml
 ```
 
+Command to debugging using console
 
-
+```
+journalctl -u logstash -e
+```
 
