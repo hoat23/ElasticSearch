@@ -141,3 +141,7 @@ Command to debugging using console
 journalctl -u logstash -e
 ```
 
+Command to see arguments for logstash process
+```
+ps -ef |grep -i logstash 
+```
