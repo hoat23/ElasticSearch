@@ -97,6 +97,8 @@ if !( [field1] and [field2] and [field3] ) {
 
 ```
 smidump -p FORTINET-CORE-MIB.mib --level=1 -k -f python FORTINET-FORTIGATE-MIB.mib
+
+smidump -p CISCO-SMI.mib  CISCO-TC.mib CISCO-VTP-MIB.mib  --level=1 -k -f python CISCO-STACK-MIB.mib > CISCO-STACK-MIB.dic
 ```
 
 #### Other configurations 
