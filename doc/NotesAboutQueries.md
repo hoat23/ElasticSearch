@@ -1,3 +1,4 @@
+POST /_cache/clear
 
 GET filebeat-7.2.0-2019.07.18-000001/_search
 {
