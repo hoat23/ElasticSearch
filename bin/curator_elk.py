@@ -1,8 +1,9 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 11/07/2019
+# Last update: 22/01/2020
 # Description: Procesar las alertas generadas & otras utilerias
+# https://blog.nviso.be/2019/06/17/optimizing-elasticsearch-part-2-index-lifecycle-management/
 #######################################################################################
 import argparse
 import sys
@@ -83,14 +84,14 @@ def execute_migration_nodes(list_index, to_node="hot"):
         for index in list_index:
             URL_API = "{0}/{1}/_settings".format(elk.get_url_elk(), index )
             data_query = {
-                    "index.routing.allocation" : {
-                        "include": {
-                            "instance_configuration": real_node_name
-                        },
-                        "require": {
-                            "data": to_node
-                        }
+                "index.routing.allocation" : {
+                    "include": {
+                        "instance_configuration": real_node_name
+                    },
+                    "require": {
+                        "data": to_node
                     }
+                }
             }
             rpt_json = elk.req_put( URL_API, data=data_query )
             flagExecuted = True
@@ -127,6 +128,7 @@ def police_index_in_hot(types_of_index=[], num_idx_in_hot=2, exe_idx_write_in_ho
         "syslog-group03",
         "syslog-group04",
         "syslog-group05",
+        "syslog-group06",
         "heartbeat-group01",
         "health-group01",
         "snmp-group01"]
@@ -192,6 +194,7 @@ def get_parametersCMD_curator_elk():
         exe_update_setting(index,filter_by_allocation='warm')
         pass
     elif command=="exe_idx_move_to_warm" and index!=None:
+        #python curator_elk.py -c exe_idx_move_to_warm --index ecs-fortigate-client-000006
         execute_migration_nodes(index, to_node='warm')
     elif command=="exe_idx_write_in_hot" and index!=None: # index=*group*-write 
         #python curator_elk.py -c exe_idx_write_in_hot --index *group*-write
