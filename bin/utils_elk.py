@@ -1,7 +1,7 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 21/08/2019
+# Last update: 22/01/2022
 # Description: Procesar las alertas generadas & otras utilerias
 # links: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html
 # termtos2svg 
@@ -358,7 +358,8 @@ def get_simple_list_index(names_index,filter_idx_sys=True, show_properties="sett
     list_idx=sorted(list_idx, reverse=sort_reverse)
     return list_idx
 #######################################################################################
-def get_index_by_allocation(names_index, filter_by_allocation=None ,filter_idx_sys=True, path="*.settings.index.routing.allocation.include.instance_configuration"):
+# path  "*.settings.index.routing.allocation.include.instance_configuration" "*.settings.index.routing.allocation.require.data"
+def get_index_by_allocation(names_index, filter_by_allocation=None ,filter_idx_sys=True, path="*.settings.index.routing.allocation.require.data"):
     # filter_by_allocation = "hot" or "warm"
     list_index = get_list_index(names_index, filter_idx_sys=filter_idx_sys, path=path, show_null_values=True)
     list_index_hot = []
@@ -366,14 +367,16 @@ def get_index_by_allocation(names_index, filter_by_allocation=None ,filter_idx_s
     for index in list_index:
         try:
             value = index['val']
+            #print_json(index)
         except:
             value = ""
         finally:
-            if value.find("highstorage")>0:
+            if value.find("highstorage")>=0 or value.find("warm")>=0:
                 list_index_warm.append(index)
-            elif value.find("highio")>0:
+            elif value.find("highio")>=0 or value.find("hot")>=0:
                 list_index_hot.append(index)
             else:
+                print("get_index_by_allocation | don't find allocation |{1} |idx={0}".format(index, value))
                 list_index_hot.append(index)
     #print_json(new_list_index_hot)
     data_json = {
@@ -559,7 +562,7 @@ def download_watches(filter={"match_all":{}}, elk=elasticsearch(), nameFile="wat
     URL = "{0}/.watches/_search".format( elk.get_url_elk() )
     rpt_json = elk.req_get(URL, data=query)
     list_watches = getelementfromjson(rpt_json, "hits.[hits]")[0]
-    rpt_json =[]
+    rpt_json_list =[]
     for watch in list_watches:
         _id = watch['_id']
         _source = watch['_source']
@@ -578,15 +581,16 @@ def download_watches(filter={"match_all":{}}, elk=elasticsearch(), nameFile="wat
                 "actions": _actions
             }
         }
-        rpt_json.append(tmp_json)
-    if len(rpt_json)>0:
+        rpt_json_list.append(tmp_json)
+    if len(rpt_json_list)>0:
         #print_json(list_watches)
         print("{1}| download_watches| INFO | downloading <{0}>".format(nameFile, datetime.utcnow().isoformat()))
         get_list_watches()
         if nameFile!=None:
-            save_yml({"watches": rpt_json}, nameFile)
+            save_yml({"watches": rpt_json_list}, nameFile)
     else:
         print("{1}| download_watches| ERROR | downloading <{0}>".format(nameFile, datetime.utcnow().isoformat()))
+        print_json(rpt_json)
     return rpt_json
 #######################################################################################
 def build_query_filter(index, terms=[], size=0, sort=["@timestamp","desc"]):
@@ -668,18 +672,21 @@ def update_fields_in_document(index="index_configuration",one_field="dict_client
     return rpt_bool
 #######################################################################################
 def get_parametersCMD():
-    command = value = client = index = None
+    command = value = client = index = query_str = None
     parser = argparse.ArgumentParser()
     parser.add_argument("-c","--command",help="Comando a ejecutar en la terminal [update, get_list_idx, download_watches, update_dict_monitoring ]")
     parser.add_argument("-v","--value",help="Comando a ejecutar en la terminal [nameFile.jml ]")
     parser.add_argument("-f","--client",help="Commando para filtar por cliente o indice(hot-warm) [ ]")
     parser.add_argument("-i","--index",help="Commando para especificar el indice (soporta wildcards)")
+    parser.add_argument("-q","--query",help="Commando para especificar una query.")
     args = parser.parse_args()
 
     if args.command: command = str(args.command)
     if args.value: value = str(args.value) 
     if args.client: client = str(args.client) 
     if args.index: index = str(args.index)
+    if args.query: query_str = str(args.query)
+
     if( command==None):
         print("ERROR: Faltan parametros.")
         print("command\t [{0}]".format(command))
@@ -699,7 +706,15 @@ def get_parametersCMD():
             list_idx = get_simple_list_index(index) # value=".*" (buscar indices usando wildcards)
             print_list(list_idx, num=1)
     elif command=="download_watches":
-        download_watches(nameFile=value)
+        print("INFO  | download_watches | -i [WATCHER_ID]")
+        if index==None:
+            filter_json = {"match_all": {}}
+        else:
+            filter_json = {"match": {"_id": index}} # -i: especificar el id del watcher
+        
+        if value==None: value = "watches.yml"
+        print("INFO  | download_watches in  file [{0}]".format(value))
+        download_watches(filter=filter_json, nameFile=value)
     elif command=="download_incidencias":
         download_incidencias()
     elif command=="update_dict_monitoring" and client!=None:
