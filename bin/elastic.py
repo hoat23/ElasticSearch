@@ -125,26 +125,26 @@ class elasticsearch():
         
         URL = self.url_elk + INDEX + TYPE + "/_search"
         json_rpt = self.req_get(URL)
-        num_values = json_rpt['hits']['total']
+        num_values = json_rpt['hits']['total']['value'] #['value'] Aplica para version 7.x
         return num_values        
 
-    def get_all_element(self, INDEX="", TYPE="" ):
+    def get_documents(self, INDEX="", TYPE="" , query ={"match_all":{}}):
         if( len(INDEX)>0 ): INDEX ="/"+INDEX
         if( len( TYPE)>0 ): TYPE = "/"+TYPE
 
         URL = self.url_elk + INDEX + TYPE + "/_search"
         query = {
             "size": self.get_num_element(INDEX=INDEX,TYPE=TYPE),
-            "query":{
-                "match_all":{}
-            }
+            "query": query
         }
-
         json_rpt = self.req_get(URL, data=query)
-        #print_json(json_rpt)
-        num_values = json_rpt['hits']['total']
-        values  = json_rpt['hits']['hits']
-        
+        try:
+            num_values = json_rpt['hits']['total']
+            values  = json_rpt['hits']['hits']
+        except:
+            print("get_documents | ERROR | {0}".format(json_rpt['error']['reason']))
+            print_json(json_rpt)
+            sys.exit(0)
         return values, num_values
 
     def show_all_idx(self, INDEX="", TYPE="" ):
@@ -208,8 +208,8 @@ class elasticsearch():
 
     def set_data(self, INDEX, TYPE, ID, data):
         URL = self.url_elk + "/" + INDEX + "/" + TYPE + "/"+ ID
-        self.req_post(URL,data)
-        return
+        rpt_json = self.req_post(URL,data)
+        return rpt_json
 
     def get_by_id(self, INDEX, TYPE, ID):
         URL = self.url_elk + "/" + INDEX + "/" + TYPE + "/"+ ID
@@ -244,9 +244,15 @@ class elasticsearch():
             header_temp = {}
             if(header_json==None):
                 # Significa que el _index, _type y _id estan especificados en list_data=[_index,_type,_id,_source]
+                # update -> solo actualiza algunos campos, no es necesario especificar todos los campos del doc.
+                #           {"update":{"_index":<index>,"_type":<type>,"_id":<id>}}
+                #           { "doc" :  lista["_source"] }
+                # index  -> fuerza la actualización del documento, si el campo no existe se elimina del doc.
+                #           {"index":{"_index":<index>,"_type":<type>,"_id":<id>}}
+                #           lista["_source"]
                 #--------------------------------------------------------------------------------
                 header_temp = {
-                    "update":{
+                    "update":{ 
                         "_index": lista["_index"],
                         "_type" : lista["_type"],
                         "_id" : lista["_id"],
@@ -284,6 +290,7 @@ class elasticsearch():
         rpt_json = self.req_post(URL , data2sent )
         elapsed_time = time.time() - start_time
         print("[POST_BULK] Elapsed time : %.10f seconds\n" % elapsed_time)
+        print_json(rpt_json)
         if 'errors' in rpt_json:
             if rpt_json['errors']== True:
                 print_json(rpt_json)
@@ -292,98 +299,55 @@ class elasticsearch():
     def algorithm(self,data):
         raise NotImplementedError()
 
-    def algorithm_process_data(self,data):
-        FECHA_REGISTRO="2018-11-21 17:51:29"
-
-        if(data["VProd_EndpointSecurityThreatPrevention"] == "*"):
-            TipoProd="EST"
-        else: 
-            TipoProd="VSE"
-        
-        data.update({ "TipoProd" : TipoProd })
-        #print_json(data)
-        
-        IdMcafee={
-            "LastVersAgent" : "5.0.6.220",
-            "LastVSE1" : "8.8.0.1445",
-            "LastVSE2" : "8.8.0.1444",
-            "LastVSE3" : "8.8.0.1443",
-            "LastDAT1" : "9076",
-            "LastDAT2" : "9075",
-            "LastDAT3" : "9074",
-            "LastEST1" : "10.5.3.3264",
-            "LastEST2" : "10.5.3.3263",
-            "LastEST3" : "10.5.3.3262",
-            "LastAMC1" : "3527",
-            "LastAMC2" : "3526",
-            "LastAMC3" : "3525",
-            "InsFecha" : "2018-11-21 17:51:29"
-        }
-        #
-        if(data["VProd_Agent"]==IdMcafee["LastVersAgent"] and IdMcafee["InsFecha"]==FECHA_REGISTRO):
-            data.update({"Agent_status":"ACTUALIZADO"})
-        else:
-            data.update({"Agent_status":"DESACTUALIZADO"})
-        ###################################################
-        VERSION_DAT = data["V_DAT"]
-        VERSION_VSE = data["VProd_VSE"]
-        VERSION_AMC = data["V_AMCore_Content"]
-        VERSION_EST = data["VProd_EndpointSecurityThreatPrevention"]
-        ###################################################
-        data.update({"status_final":"DESACTUALIZADO"})
-        
-        if(data['TipoProd']=="VSE"):
-            data.update({"VSE_status":"DESACTUALIZADO"})
-            data.update({"DAT_status":"DESACTUALIZADO"})
-            if( (IdMcafee["InsFecha"]==FECHA_REGISTRO and  VERSION_VSE==IdMcafee["LastVSE1"]) or 
-                (IdMcafee["InsFecha"]==FECHA_REGISTRO and VERSION_VSE==IdMcafee["LastVSE2"]) or 
-                (IdMcafee["InsFecha"]==FECHA_REGISTRO and VERSION_VSE==IdMcafee["LastVSE3"]) ):
-                data.update({"VSE_status":"ACTUALIZADO"})
-            
-            if( (VERSION_DAT==IdMcafee["LastDAT1"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) or
-                (VERSION_DAT==IdMcafee["LastDAT2"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) or
-                (VERSION_DAT==IdMcafee["LastDAT3"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) ):
-                data.update({"DAT_status":"ACTUALIZADO"})
-            
-            if( data["VSE_status"]=="ACTUALIZADO" and data["DAT_status"]=="ACTUALIZADO" ):
-                data.update({"status_final":"ACTUALIZADO"})
-        else:
-            data.update({"VSE_status":"NO APLICA"})
-            data.update({"DAT_status":"NO APLICA"})
-        
-        if(data['TipoProd']=="EST"):
-            data.update({"EST_status":"DESACTUALIZADO"})
-            data.update({"AMC_status":"DESACTUALIZADO"})
-
-            if( (VERSION_EST==IdMcafee["LastEST1"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) or
-                (VERSION_EST==IdMcafee["LastEST2"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) or
-                (VERSION_EST==IdMcafee["LastEST3"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) ):
-                data.update({"EST_status":"ACTUALIZADO"})
-            
-            if( (VERSION_AMC==IdMcafee["LastAMC1"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) or
-                (VERSION_AMC==IdMcafee["LastAMC2"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) or
-                (VERSION_AMC==IdMcafee["LastAMC3"] and IdMcafee["InsFecha"]==FECHA_REGISTRO) ):
-                data.update({"AMC_status":"ACTUALIZADO"})
-            
-            if( data["EST_status"]=="ACTUALIZADO" and data["AMC_status"]=="ACTUALIZADO" ):
-                data.update({"status_final":"ACTUALIZADO"})
-        else:
-            data.update({"EST_status":"NO APLICA"})
-            data.update({"AMC_status":"NO APLICA"})
-
+    def algorithm_process_data(self,data,list_server):
+        try:
+            tmp = data['NetBIOS Name'].split("\\")
+            name_device = tmp[1]
+            flagFound=False
+            for name in list_server:
+                if name_device == name:
+                    flagFound=True
+                    break
+            if flagFound:
+                data['type_device'] = 'server'
+            else:
+                data['type_device'] = 'workstation'
+                #input("error      ")
+        except:
+            #print_json(data)
+            data['type_device'] = 'workstation'
+            #input("press any key...")
+        #print("algorithm_process_data | END | ")
         return data
     #######################################################################################    
     #@count_elapsed_time
     def process_data(self, INDEX,TYPE=""):
-        list_element, length = self.get_all_element(INDEX=INDEX,TYPE="")
+        mes = "Jul-19"
+        query={
+            "bool": {
+            "must": [
+                {"match": {"tipo_reporte": "vulnerabilidades"}},
+                {"match": {"mes": mes}}
+            ],
+            "should": [
+                {"match": {"severity": "High"}},
+                {"match": {"severity": "Critical"
+                }
+                }
+            ]
+            }
+        }
+        list_element, length = self.get_documents(INDEX=INDEX,TYPE="",query=query)
         #print(str(length))
         #self.show_all_idx(INDEX=INDEX,TYPE="")
         start_time = time.time()
         cont = 0
         list_data = []
+        list_server = loadYMLtoJSON("server.yml")
+        #print_json(list_server)
         for e in list_element:
             try:
-                data = self.algorithm_process_data(e["_source"])
+                data = self.algorithm_process_data(e["_source"],list_server)
                 list_data.append({
                         "_index":e["_index"],
                         "_type" :e["_type"],
@@ -401,7 +365,7 @@ class elasticsearch():
         return
 
     def process_repsol(self):
-        INDEX = "repsol_data"
+        INDEX = "repsol-vulnerabilidades"
         self.process_data(INDEX,"_doc")
         return
 #######################################################################################
@@ -409,7 +373,6 @@ def test_conection_from_file():
     config_json = {
         "elasticsearch": [{
             "type": "file",
-            "send": True,
             "file": "credential_elasticsearch.yml"
         }]
     }
@@ -422,6 +385,7 @@ def test():
     print("Test class elastic")
     #ec=elasticsearch(url=URL_M,user=USER_M,pas=PASS_M)
     ec=elasticsearch(url=URL,user=USER,pas=PASS)
+    
     #ec=elasticsearch()
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cat/indices?v") #_search?pretty
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state/_all/syslog-global-write")
@@ -434,9 +398,10 @@ def test():
     lista_json = loadCSVtoJSON("Todos_los_equipos_Peru.csv")
     ec.delete_by_index("repsol")
     ec.post_bulk(lista_json,headers={"index":{"_index":"repsol","_type":"_doc"}})
-    ec.process_repsol()
-    ec.algorithm()
     """
+    ##ec.process_repsol()
+    ##ec.algorithm()
+    
     
     #ec.get_hits(INDEX="cars",TYPE="transactions")
     #ec.get_hits(INDEX="repsol")
