@@ -1,0 +1,280 @@
+input {
+    
+    pipeline {
+        address => "supra-syslog"
+    }
+
+}
+
+filter {
+    if ! ([elk][index]) {
+        mutate {
+            add_field => {"[elk][index]" => "syslog"}
+        }
+    }
+
+    mutate{
+        add_field => {"[cmdb][reporting_ip]" => "%{[host]}"}
+        remove_field => ["host"]
+    }
+
+    if [priority] or [severity] or [severity_label] or [facility] or [facility_label]{
+        mutate {
+            add_field => {"[syslog][priority]" => "%{[priority]}"}
+            add_field => {"[syslog][severity]" => "%{[severity]}"}
+            add_field => {"[syslog][severity_label]" => "%{[severity_label]}"}
+            add_field => {"[syslog][facility]" => "%{[facility]}"}
+            add_field => {"[syslog][facility_label]" => "%{[facility_label]}"}
+        }
+    }
+    
+    mutate {
+        add_field => { "message" => "event_original" }
+    }
+
+    grok {
+      match => ["message", "%{SYSLOG5424PRI:syslog_index}%{GREEDYDATA:message}"]
+      overwrite => ["message"]
+      tag_on_failure => ["forti_grok_failure"]
+      add_field => ["received_at", "%{@timestamp}"]
+    }
+    
+    #Expects you have csv enable set on your Fortigate. If not I think you'll have to change it to " " but I didn't test that.
+    if "forti_grok_failure" not in [tag_on_failure]{
+        kv {
+          source => "message"
+          value_split => "="
+          field_split => " "
+        }
+    } 
+
+    date {
+      match => ["temp_time", "yyyy-MM-dd HH:mm:ss"]
+      timezone => "UTC"
+      target => "@timestamp"
+    }
+
+    mutate {
+      #add/remove fields as you see fit. "sentpkt","rcvdpkt", "poluuid"
+      remove_field => ["syslog_index","syslog5424_pri","path","temp_time","date","time","log_id"]
+      convert => { "duration" => "integer" }
+    }
+    
+    if [tunnelip]=="N/A"{
+        mutate{
+            remove_field => ["tunnelip"]
+        }
+    }
+    
+    if [assignip]=="N/A"{
+        mutate{
+            remove_field => ["assignip"]
+        }
+    }    
+
+    if [dstip]=="N/A"{
+        mutate {
+            remove_field => ["dstip"]
+        }
+    }
+    if [srcip]=="N/A"{
+        mutate {
+            remove_field => ["srcip"]
+        }
+    }
+
+    geoip {
+      source => "dstip"
+      target => "geoip_dst"
+    }
+
+    geoip {
+      source => "srcip"
+      target => "geoip_src"
+    }
+
+    if [sentbyte] and [rcvdbyte] {
+        ruby {
+            code => "event.set('bytesTotal', event.get('sentbyte').to_i + event.get('rcvdbyte').to_i )"
+        }
+    }
+    
+    mutate{
+        remove_field => [ "dstcountry" , "srccountry" , "received_from" , "srcserver" , "-DevIP"]
+    }
+    
+    ##############[ini]: Analisis de logid #########################
+    if [logid] {
+      ruby
+      {
+        #logid, fglogid
+        code =>   "if (event.get('logid').to_s.length==2);    event.set('fglogid', event.get('logid'));else;    event.set('fglogid', event.get('logid')[event.get('logid').to_s.length-5 ... event.get('logid').to_s.length]);end;"
+      }
+      
+      translate {
+          field => "[fglogid]"
+          destination => "[csvlogid]"
+          dictionary_path => "/etc/logstash/dict_logID.yml"
+          fallback => "default"
+      }
+      #End translate by host   
+      csv {
+          source => "csvlogid"
+          separator => ";"
+          columns => ["log_description", "log_category"]
+      }
+
+      ruby {
+      code => '
+        logid_json = {}
+        dict_type_subtype = {
+          "0000" => "TRAFFIC;FORWARD",
+          "0001" => "TRAFFIC;LOCAL",
+          "0002" => "TRAFFIC;MULTICAST",
+          "0004" => "TRAFFIC;SNIFFER",
+          "0100" => "EVENT;SYSTEM",
+          "0101" => "EVENT;VPN",
+          "0102" => "EVENT;USER",
+          "0103" => "EVENT;ROUTER",
+          "0104" => "EVENT;WIRELESS",
+          "0105" => "EVENT;WAD",
+          "0107" => "EVENT;ENDPOINT",
+          "0108" => "EVENT;HA",
+          "0109" => "EVENT;COMPLIANCE-CHECK",
+          "0110" => "EVENT;SECURITY_AUDIT",
+          "0112" => "EVENT;CONNECTOR",
+          "01**" => "EVENT;FORTIEXTENDER",
+          "0207" => "VIRUS;MALWARE-LIST",
+          "0211" => "VIRUS;INFECTED",
+          "0212" => "VIRUS;BLOCKED",
+          "0213" => "VIRUS;OVERSIZED",
+          "0262" => "VIRUS;SCANERROR",
+          "0200" => "VIRUS;SUSPICIUS",
+          "0201" => "VIRUS;ANALYTICS",
+          "0263" => "VIRUS;SWITCHPROTO",
+          "0261" => "VIRUS;MIMEFRAGMENTED",
+          "0203" => "VIRUS;VIRUS_FILETYPE_EXE",
+          "0202" => "VIRUS;BOTNET",
+          "0314" => "WEBFILTER;CONTENT",
+          "0315" => "WEBFILTER;URLFILTER",
+          "0316" => "WEBFILTER;FTGD_BLK",
+          "0317" => "WEBFILTER;FTGD_ALLOW",
+          "0318" => "WEBFILTER;FTGD_ERR",
+          "0319" => "WEBFILTER;URL_MONITOR",
+          "0335" => "WEBFILTER;SCRIPTFILTER_ACTIVEX",
+          "0336" => "WEBFILTER;SCRIPTFILTER_ COOKIE",
+          "0337" => "WEBFILTER;SCRIPTFILTER_APPLET",
+          "0338" => "WEBFILTER;FTGD_QUOTA_COUNTING",
+          "0339" => "WEBFILTER;FTGD_QUOTA_EXPIRED",
+          "0340" => "WEBFILTER;FTGD_QUOTA",
+          "0341" => "WEBFILTER;SCRIPTFILTER_OTHER",
+          "0343" => "WEBFILTER;WEBFILTER_COMMAND_BLOCK",
+          "03**" => "WEBFILTER;FILE_FILTER",
+          "0419" => "IPS;SIGNATURE",
+          "0421" => "IPS;MALICIOUS_URL",
+          "04**" => "IPS;BOTNET",
+          "0508" => "EMAIL;SMTP",
+          "0509" => "EMAIL;POP3",
+          "0510" => "EMAIL;IMAP",
+          "0511" => "EMAIL;MAPI",
+          "0547" => "EMAIL;CARRIER-ENDPOINT-FILTER",
+          "0552" => "EMAIL;MASS-MMS",
+          "0505" => "EMAIL;MSN-HOTMAIL",
+          "0506" => "EMAIL;YAHOO-MAIL",
+          "0507" => "EMAIL;GMAIL",
+          "0553" => "EMAIL;FTGD_ERR",
+          "0554" => "EMAIL;FILE_FILTER",
+          "0720" => "ANOMALY;ANOMALY",
+          "0814" => "VOIP;VOIP",
+          "0954" => "DLP;DLP",
+          "0955" => "DLP;DLP-DOCSOURCE",
+          "1059" => "APP_CTRL;APP-CTRL-ALL",
+          "1200" => "WAF;SIGNATURE",
+          "1201" => "WAF;CUSTOM_SIGNATURE",
+          "1202" => "WAF;METHOD",
+          "1203" => "WAF;CONSTRAINTS",
+          "1204" => "WAF;ADDRESS_LIST",
+          "1205" => "WAF;URL_ACCESS",
+          "1400" => "GTP;ALL",
+          "1500" => "DNS;DNS-QUERY",
+          "1501" => "DNS;DNS-RESPONSE",
+          "1600" => "SSH;SSH-COMMAND",
+          "1601" => "SSH;SSH-CHANNEL",
+          "1700" => "SSL;SSL-ANOMALIES",
+          "1701" => "SSL;SSL-EXEMPT",
+          "1800" => "CIFS;CIFS-FILEFILTER"
+        }
+        begin
+            logid_num = event.get("[logid]").to_i
+            mssg = event.get("[log_description]")
+            logid_str = "%010d" % [logid_num]
+            logid_json["status"] = "ok 00"
+        rescue
+            mssg = nil
+            logid_str = nil
+            logid_json["status"] = "error 00"
+        end
+
+        if logid_str!=nil and logid_str.length==10 and mssg!=nil
+          typeid_str = logid_str[0...2]
+          subtypeid_str = logid_str[2...4]
+          mssgid_str = logid_str[4...10]
+          begin
+            logid_json["logid"] = logid_str.to_i
+            logid_json["typeid"] = typeid_str.to_i
+            logid_json["subtypeid"] = subtypeid_str.to_i
+            logid_json["messageid"] = mssgid_str.to_i
+            logid_json["message"] = mssg
+            logid_json["status"] = logid_json["status"]+ "|ok 01"
+          rescue
+            logid_json["status"] = logid_json["status"] + "|error 01"
+          ensure
+            event.set("[logid_json]",logid_json)
+          end
+          # [begin|ensure|rescue]
+        else
+          logid_json["status"] = logid_json["status"] + "|" + logid_str + "|error 02"
+        end
+        vartxt_tmp = "error_split;error_split"
+        begin
+          varid_tmp = typeid_str+subtypeid_str
+          vartxt_tmp = dict_type_subtype[varid_tmp]
+        rescue
+          begin
+            varid_tmp = typeid_str+"**"
+            vartxt_tmp = dict_type_subtype[varid_tmp]
+          rescue
+            vartxt_tmp = "error;error"
+          end
+        ensure
+          values = vartxt_tmp.split(";")
+          type_str = values[0]
+          subtype_str = values[1]
+          logid_json["status"] = logid_json["status"] + "|" + type_str +"|"+subtype_str
+        end
+        
+        begin
+          logid_json["type"] = type_str
+          logid_json["subtype"] = subtype_str
+          logid_json["status"] = logid_json["status"] + "|ok 03"
+        rescue
+          logid_json["status"] = logid_json["status"] + "|error 03"
+        end
+        
+        logid_json.delete("status")
+        event.set("[logid_json]",logid_json)
+      '
+      }
+    }
+    ##############[end]: Analisis de logid #########################
+    
+    mutate{
+        remove_field => ["csvlogid","logid","fglogid","log_description", "log_category", "message"]
+    }
+}
+
+output {
+    pipeline {
+        send_to => "supra-filter"
+    }
+}
