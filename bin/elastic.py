@@ -2,7 +2,7 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 19/11/2018
-# Last update: 23/07/2019
+# Last update: 10/02/2020
 # Description: Server to conect Streak - Webhoook
 # Notes: Elastic only support binary data encoded in base64.
 # Link: https://ogma-dev.github.io/posts/simple-flask-webhook/
@@ -290,7 +290,7 @@ class elasticsearch():
         rpt_json = self.req_post(URL , data2sent )
         elapsed_time = time.time() - start_time
         print("[POST_BULK] Elapsed time : %.10f seconds\n" % elapsed_time)
-        print_json(rpt_json)
+        #print_json(rpt_json)
         if 'errors' in rpt_json:
             if rpt_json['errors']== True:
                 print_json(rpt_json)
