@@ -26,7 +26,7 @@ POST my_index/_update_by_query?conflicts=proceed&slices=4&wait_for_completion
     ctx._source['client_ip'] = '{params.client_ip}';
     """,
     "params": {
-       "field": "client_ip
+       "field": "client_ip"
     }
   }
   ,
