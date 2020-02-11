@@ -16,7 +16,7 @@ GET filebeat-7.2.0-2019.07.18-000001/_search
 ### Update by query : using slices (faster)
 
 ```
-POST syslog-auna/_update_by_query?conflicts=proceed&slices=4
+POST my_index/_update_by_query?conflicts=proceed&slices=4
 {
   "script": {
     "inline": """
