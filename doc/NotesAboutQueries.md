@@ -4,7 +4,7 @@
 POST /_cache/clear
 ```
 
-### Getting totals hits in by query
+### Getting totals hits by query
 
 ```
 GET filebeat-7.2.0-2019.07.18-000001/_search
