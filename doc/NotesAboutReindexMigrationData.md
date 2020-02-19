@@ -1,13 +1,13 @@
 ## Simple - One Field
 
 ```
-POST _reindex?slices=3
+POST _reindex?slices=3&wait_for_completion=false&conflicts=proceed
 {
   "source": {"index": "my_src_index"},
   "dest": {"index": "my_dst_index"}
 }
 
-POST _reindex?slices=3
+POST _reindex?slices=3&wait_for_completion=false&conflicts=proceed
 {
   "source": {
     "index": "my_src_index-*",
@@ -42,3 +42,21 @@ POST _reindex?slices=3&wait_for_completion=false&conflicts=proceed
   }
 }
 ```
+
+## Kill reindex task
+
+See reindex task
+
+```
+GET _tasks?human&actions=*reindex
+```
+
+Kill reindex task by id-task
+
+```
+POST _tasks/DE5LZSkcQwSOkhj-FZl-9F:4609023/_cancel
+```
+
+
+
+
