@@ -43,6 +43,8 @@ POST _reindex?slices=3&wait_for_completion=false&conflicts=proceed
 }
 ```
 
+More information about "painless" language https://www.elastic.co/guide/en/elasticsearch/painless/master/painless-contexts.html
+
 ## Kill reindex task
 
 See reindex task
