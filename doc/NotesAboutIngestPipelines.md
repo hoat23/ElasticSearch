@@ -69,10 +69,10 @@ PUT _ingest/pipeline/drop_dont_exists_utmaction
     {
       "drop": {
         "if": """
-          if(ctx.utmaction != null){
-            return false;
-          }else{
+          if( (ctx.utmaction == null || ctx.utmaction == '' ) && ctx.type == 'traffic'){
             return true;
+          }else{
+            return false;
           }
     """
       }
