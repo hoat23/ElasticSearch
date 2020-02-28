@@ -61,3 +61,22 @@ POST _template/metricbeat-7.3.0
   }
 }
 ```
+
+```
+PUT _ingest/pipeline/drop_dont_exists_utmaction
+{
+  "processors": [
+    {
+      "drop": {
+        "if": """
+          if(ctx.utmaction != null){
+            return false;
+          }else{
+            return true;
+          }
+    """
+      }
+    }
+  ]
+}
+```
