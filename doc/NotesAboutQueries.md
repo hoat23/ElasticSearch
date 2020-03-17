@@ -45,6 +45,7 @@ POST my_index/_update_by_query?conflicts=proceed&slices=4&wait_for_completion
     ctx._source['user']= value;
     ctx._source['fuente']= 'ip';
     ctx._source['client_ip'] = '{params.client_ip}';
+    ctx._source['organization'] = ['name':'my_organization'];
     """,
     "params": {
        "field": "client_ip"
