@@ -20,6 +20,9 @@ PUT my_index-alias-write/_doc/1
 ```
 
 ### Crear politica ILM 
+
+The size (max_size: 5mb) is only the primary shard, don't include the replicas. 
+
 ```
 PUT _ilm/policy/policy_index_management
 {
