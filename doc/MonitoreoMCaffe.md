@@ -54,9 +54,17 @@ filter{
 }
 
 output{
-    # dots
+    # dots -  just by printing in console
     stdout {
       codec => rubydebug
+    }
+    
+    # Sending to Elasticsearch
+    elasticsearch {
+        hosts => ["https://your_cluster_elasticsearch:9243"]
+        user => "your_user"
+        password => "your_password"
+        index => "%{[elk][index]}-group01-write"
     }
     
 }
