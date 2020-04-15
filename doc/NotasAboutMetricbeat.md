@@ -11,8 +11,12 @@
   metricsets:
     - "transaction_log"
     - "performance"
-  hosts: ["sqlserver://<USER_BD>:<PASS_BD>@<IP_BD>"]
+  hosts: ["sqlserver://<USER_DB>:<PASS_DB>@<IP_DB>"]
   period: 10m
+
+# <USER_DB>: user credential of database.
+# <PASS_DB>: password credential of database.
+# <IP_DB>: IP of database
 ```
 
 Execute this command into MSQL for enabled special permission (View Server State) to <USER_BD>.
