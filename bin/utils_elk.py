@@ -1,13 +1,13 @@
 # coding: utf-8
 # Developer: Deiner Zapata Silva.
 # Date: 02/14/2019
-# Last update: 22/01/2022
+# Last update: 08/06/2020
 # Description: Procesar las alertas generadas & otras utilerias
 # links: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html
 # termtos2svg 
 #######################################################################################
 import argparse, sys
-import pandas as pd
+#import pandas as pd
 from datetime import datetime
 from elastic import *
 from utils import *
@@ -240,20 +240,17 @@ def download_configuration_from_elk(elk):
     
     return logstash
 #######################################################################################
-def download_watchers(elk=None):
-    data_query = { #GET supra_data/_search
+def download_watchers(elk=elasticsearch(), api_path=".watches/_search", filename=None):
+    data_query = {
         "size": 1000,
         "query": {
             "match_all": {}
             }
         }
-    
-    URL_API = "{0}/.watches/_search".format(elk.get_url_elk())
-    data_response = elk.req_get(URL_API, data = data_query)
+    data_response = download_elk(elk=elk, api_path=api_path, query=data_query, filename=filename)
     return
 #######################################################################################
-def download_incidencias(elk=None):
-    if elk==None: elk = elasticsearch()
+def download_incidencias(elk=elasticsearch()):
     data_query = {
         "size": 1000,
         "query": {
@@ -265,15 +262,30 @@ def download_incidencias(elk=None):
             }
         }
     }
-    URL_API = "{0}/index_configuration/_search".format(elk.get_url_elk())
     try:
-        data_response = elk.req_get(URL_API, data=data_query)
+        data_response = download_elk(elk=elk, api_path="index_configuration/_search", query=data_query)
         list_incidencias = data_response["hits"]["hits"]
         save_yml({"list_incidencias": list_incidencias},nameFile="incidencias.yml")
     except:
         print("ERROR | download_incidencias ")
     finally:
         return
+#######################################################################################
+def download_elk(elk=elasticsearch(), api_path="_template", filename=None, query= None):
+    if elk==None: elk = elasticsearch()
+    URL_API = "{0}/{1}".format(elk.get_url_elk(), api_path)
+    rpt={}
+    try:
+        rpt = elk.req_get(URL_API, data=query)
+        if filename!=None:
+            save_yml(rpt,nameFile=filename)
+            print("INFO  | download_elk | filename={0}".format(filename))
+    except:
+        print("ERROR | download_elk | {0} | {1}".format(api_path, filename))
+        #print_json(rpt)
+    finally:
+        return rpt
+#######################################################################################
 def get_incidencia(incidencia_type):
     #list_incidencias = []
     incidencias_json = loadYMLtoJSON("incidencias.yml")
@@ -695,6 +707,9 @@ def get_parametersCMD():
         #python utils_elk.py -c download_cmdb_elk -f TASA
         print("INFO  | cmdb_elk [{0}]".format(client))
         download_cmdb_elk(client)
+    elif command=="download" and value!=None and client!=None:
+        #python utils_elk.py -c download -v _ilm/policy -f ilm_policy.yml
+        rpt = download_elk(api_path=value, filename=client)
     elif command=="get_list_idx" or value!=None and index!=None:
         #python utils_elk.py -c get_list_idx -v hot-warm --index *group*
         if value == "hot-warm" or value == "hot" or value == "warm" or value =="h-w":
@@ -712,10 +727,12 @@ def get_parametersCMD():
         else:
             filter_json = {"match": {"_id": index}} # -i: especificar el id del watcher
         
+        #python utils_elk.py -c download_watches
         if value==None: value = "watches.yml"
         print("INFO  | download_watches in  file [{0}]".format(value))
         download_watches(filter=filter_json, nameFile=value)
     elif command=="download_incidencias":
+        #python utils_elk.py -c download_incidencias
         download_incidencias()
     elif command=="update_dict_monitoring" and client!=None:
         #python utils_elk.py -c update_dict_monitoring -f <CLIENT_NAME>
