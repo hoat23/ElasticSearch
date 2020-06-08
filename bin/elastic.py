@@ -2,7 +2,7 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 19/11/2018
-# Last update: 10/02/2020
+# Last update: 08/06/2020
 # Description: Server to conect Streak - Webhoook
 # Notes: Elastic only support binary data encoded in base64.
 # Link: https://ogma-dev.github.io/posts/simple-flask-webhook/
@@ -69,7 +69,7 @@ class elasticsearch():
 
     def req_get(self, URL_API,data="",timeout=None):
         if (URL_API==None): URL_API = self.url_elk
-        if (len(data)>0):
+        if (data!=None):#len(data)>0
             headers = {'Content-Type': 'application/json'}
             data = json.dumps(data)
             rpt = requests.get( url=URL_API , auth=(self.user,self.pas), headers=headers , data=data , timeout=timeout)
