@@ -68,3 +68,10 @@ Servidor Jupyter instalado en AWS que permite interactuar con la data de Elastic
  |--notebook: Contiene los Notebok para testear codigo Python.
  ```
  ## WARNING: No modificar el archivo "jupyter_notebook_config.py".
+ 
+ ## Requirements
+ It's in /bin/requirements.txt
+ 
+ ```
+ pip install -r requirements.txt
+ ```
