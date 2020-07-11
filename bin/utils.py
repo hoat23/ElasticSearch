@@ -251,8 +251,9 @@ def list2json(list_field, list_value,remove_char=None,type_data=None,return_err=
     else:
         return data_json
 #######################################################################################
-def loadCSVtoJSON(path,encoding="utf-8"):
+def loadCSVtoJSON(path,encoding="utf-8",field_size_limit=100000000):
     csvfile = open(path,encoding=encoding)
+    csv.field_size_limit(field_size_limit)
     data = csv.DictReader(csvfile)#,delimiter =";",quotechar=";")
     list_data = []
     row = dict()
