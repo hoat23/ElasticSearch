@@ -194,8 +194,8 @@ class elasticsearch():
             #json_data=json.loads(data) 
             print_json(data)
         
-        self.req_put(URL,data,timeout=None)
-        return
+        rpt_json = self.req_put(URL,data,timeout=None)
+        return rpt_json
 
     def post_data(self, INDEX, data, debug=False,timeout=None):
         URL = self.url_elk + "/" + INDEX 
@@ -384,6 +384,10 @@ def test_conection_from_file():
 def test():
     print("Test class elastic")
     #ec=elasticsearch(url=URL_M,user=USER_M,pas=PASS_M)
+    URL = credentials['elastic']['url']
+    USER = credentials['elastic']['user']
+    PASS = credentials['elastic']['pasw']
+    
     ec=elasticsearch(url=URL,user=USER,pas=PASS)
     
     #ec=elasticsearch()
