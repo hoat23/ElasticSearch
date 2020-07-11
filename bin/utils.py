@@ -2,7 +2,7 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 30/11/2018
-# Last update: 09/10/2019
+# Last update: 10/07/2020
 # Description: Codigo util, para uso general
 # sys.setdefaultencoding('utf-8') #reload(sys)
 # hash      -> hashlib https://recursospython.com/guias-y-manuales/hashlib-md5-sha/
