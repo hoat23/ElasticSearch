@@ -77,3 +77,13 @@ System Monitor (Sysmon) is a Windows system service and device driver that, once
 
 Note that Sysmon does not provide analysis of the events it generates, nor does it attempt to protect or hide itself from attackers.
 
+# References
+
+https://www.binarydefense.com/using-sysmon-and-etw-for-so-much-more/
+https://github.com/SwiftOnSecurity/sysmon-config/blob/master/sysmonconfig-export.xml
+https://medium.com/@olafhartong/endpoint-detection-superpowers-on-the-cheap-part-1-e9c28201ac47
+https://www.youtube.com/watch?v=7dEfKn70HCI
+https://cyberwardog.blogspot.com
+https://lolbas-project.github.io
+https://docs.microsoft.com/en-us/sysinternals/downloads/sysmon
+
