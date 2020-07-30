@@ -4,6 +4,19 @@
 # /etc/metricbeat/metricbeat.yml
 # c:/ProgramaFiles/metricbeat/metricbeat.yml
 ```
+
+Loading modules dynamically every 60 seconds.
+
+```
+metricbeat.config.modules:
+  # Glob pattern for configuration loading
+  path: ${path.config}/modules.d/*.yml
+  # Set to true to enable config reloading
+  reload.enabled: true
+  # Period on which files under path should be checked for changes
+  reload.period: 60s
+```
+
 ### MONITORING USING MODULE MSSQL
 
 ```
