@@ -1,4 +1,4 @@
-#WinlogBeat
+# WinlogBeat
 
 ## Installing WinglogBeat
 
@@ -31,4 +31,6 @@ If want see dependency of a service, just execute:
 ```
 Get-Service "WinRM" -RequiredServices
 ```
-## 
+## Configuring WinglogBeat
+
+
