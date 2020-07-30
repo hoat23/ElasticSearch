@@ -33,4 +33,40 @@ Get-Service "WinRM" -RequiredServices
 ```
 ## Configuring WinglogBeat
 
+### Using a API-Key for ingest data
 
+```
+POST /_security/api_key
+{
+  "name": "api_key_winglogbeat",
+  "expiration": "1d", 
+  "role_descriptors": { 
+    "winglogbeat_write": {
+      "cluster": ["all"],
+      "index": [
+        {
+          "names": ["*"],
+          "privileges": ["write"]
+        }
+      ]
+    }
+  }
+}
+```
+The response return something like this:
+```
+{
+  "id":"VuaCfGcBCdbkQm-e5aOx", 
+  "name":"api_key_winglogbeat",
+  "expiration":1544068612110, 
+  "api_key":"ui2lp2axTNmsyakw9tvNnw" 
+}
+```
+
+Then proceed to configure the winglogbeat.yml file with the "id" and "api_key" respectively.
+
+```
+output.elasticsearch:
+  # Authentication credentials - either API key or username/password id:api_key.
+  api_key: "VuaCfGcBCdbkQm-e5aOx:ui2lp2axTNmsyakw9tvNnw"
+```
