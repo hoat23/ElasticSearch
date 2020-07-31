@@ -70,6 +70,76 @@ output.elasticsearch:
   # Authentication credentials - either API key or username/password id:api_key.
   api_key: "VuaCfGcBCdbkQm-e5aOx:ui2lp2axTNmsyakw9tvNnw"
 ```
+# Events in Windows
+
+## event_logs.name
+
+The name of the event log to monitor:
+```
+PS C:\User\Hoat23> Get-EventLogs *
+```
+
+The channels can also be specified. A channes is a named stream of events that transports events from an event source to an event log.
+Here is an example showing how to list all channels using PowerShell.
+
+```
+PS C:\User\Hoat23> Get-EventLogs -ListLog * | Format-List -Property LogName
+```
+
+you must specify the fullname of the channel in the configuration file.
+
+```
+winlogbeat.event_logs:
+  - name: Microsoft-Windows-Windows Firewall With Advanced Security/Firewall
+```
+
+To read events from an archived ".evtx" file
+```
+winlogbeat.event_logs:
+  - name: 'C:\backup\sysmon-2019.08.evtx'
+```
+
+## event_logs.ignore_older
+
+This option is useful when you are beginning to monitor an event log that contains older records that you would like to ignore. This field is optional.
+```
+winlogbeat.event_logs:
+  - name: Application
+    ignore_older: 168h
+```
+
+## event_logs.event_id
+
+ The value is a comma-separated list. The accepted values are single event IDs to include (e.g. 4624), a range of event IDs to include (e.g. 4700-4800), and single event IDs to exclude (e.g. -4735)
+```
+winlogbeat.event_logs:
+  - name: Security
+    event_id: 4624, 4625, 4700-4800, -4735
+```
+
+The filter shown below is equivalent to event_id: 903, 1024, 4624 but can be expanded beyond 22 event IDs.
+```
+winlogbeat.event_logs:
+  - name: Security
+    processors:
+      - drop_event.when.not.or:
+        - equals.winlog.event_id: 903
+        - equals.winlog.event_id: 1024
+        - equals.winlog.event_id: 4624
+```
+
+## event_logs.level
+
+- critical, crit
+- error, err
+- warning, warn
+- information, info
+- verbose
+```
+winlogbeat.event_logs:
+  - name: Security
+    level: critical, error, warning
+```
 
 # Sysmon
 
