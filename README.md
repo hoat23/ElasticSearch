@@ -75,3 +75,19 @@ Servidor Jupyter instalado en AWS que permite interactuar con la data de Elastic
  ```
  pip install -r requirements.txt
  ```
+
+# Types of DataBase No-SQL:
+
+## DB Key-Value:
+Each element is identified by a unique key. Example: Cassandra, BigTable or HBase.
+
+## DB Documentaries:
+This type stores the information as a document, as a simple json o xml structure, where it uses a unique key for each record. It also allows searches like key-value and more advanced aggregations. Examples: MongoDB, CouchDb or Elasticsearch.
+
+## DB Graph:
+The ifnormation is represented as nodes of a graph and its realizations with the edges of graph, so that graph theory can be used to trraverse it. The information must be fully normalized. Examples: Neo4j, InfoGrid or Virtuoso.
+
+## DB Object Oriented 
+Information is represented by objects, similar to object-oriented programming languages. Examples: Zope, Gemstone or DB4o.
+
+
