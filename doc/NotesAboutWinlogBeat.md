@@ -70,6 +70,12 @@ output.elasticsearch:
   # Authentication credentials - either API key or username/password id:api_key.
   api_key: "VuaCfGcBCdbkQm-e5aOx:ui2lp2axTNmsyakw9tvNnw"
 ```
+Deleting the api-key by id
+```
+#In kibana-console
+DELETE .security-7/_doc/VuaCfGcBCdbkQm-e5aOx
+```
+
 # Events in Windows
 
 ## event_logs.name
