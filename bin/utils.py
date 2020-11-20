@@ -15,7 +15,7 @@ import requests
 import json
 import csv
 #from flask import Flask, request, abort
-import jwt # pip install pyjwt
+#import jwt # pip install pyjwt
 import time
 import os
 import re
@@ -459,6 +459,7 @@ def testing_crypto():
 #######################################################################################
 # doc_jwt http://ras-software-blog.com/?p=107
 def hmac_json_encode(data_json, password="", algorithm="HS256"):
+    import jwt
     #data_json_encrypted = header.payload.signature(openssl sha256 -hmac <password>)
     data_json_to_encrypt = data_json
     data_json_encrypted = jwt.encode(data_json_to_encrypt, password, algorithm=algorithm)
@@ -466,6 +467,7 @@ def hmac_json_encode(data_json, password="", algorithm="HS256"):
     return data_json_encrypted
 #######################################################################################
 def hmac_json_decode(data_json, password="", algorithm="HS256"):
+    import jwt
     #data_json = header.payload.signature(openssl sha256 -hmac <password>)
     data_json_to_decode = data_json
     data_json_decoded = jwt.decode(data_json_to_decode, password, algorithm=algorithm)
