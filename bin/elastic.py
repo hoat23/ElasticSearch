@@ -147,6 +147,11 @@ class elasticsearch():
             sys.exit(0)
         return values, num_values
 
+    def get_search(self, body_query, index):
+        URL = "{0}/{1}/_search".format (self.url_elk,index)
+        json_rpt = self.req_get(URL, data = body_query)
+        return json_rpt
+
     def show_all_idx(self, INDEX="", TYPE="" ):
         if( len(INDEX)>0 ): INDEX ="/"+INDEX
         if( len( TYPE)>0 ): TYPE = "/"+TYPE
