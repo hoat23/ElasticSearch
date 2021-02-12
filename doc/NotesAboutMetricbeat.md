@@ -1,4 +1,14 @@
 # METRICBEAT
+## Run in debug mode
+```
+metricbeat -e
+```
+
+## Start service 
+In Ubuntu:
+```
+service metricbeat start
+```
 ### FILE OF GLOBAL CONFIGURATION
 ```
 # /etc/metricbeat/metricbeat.yml
