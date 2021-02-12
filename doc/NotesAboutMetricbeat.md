@@ -1,10 +1,10 @@
 # METRICBEAT
 ## Cloud Management
-1. Enroll Beats
-3. Run in debug-mode
-3. Configure module
-4. Configure output
-5. If all ok, then run service.
+- Enroll Beats
+- Run in debug-mode
+- Configure module
+- Configure output
+- If all ok, then run service.
 
 ## Run in debug mode
 ```
