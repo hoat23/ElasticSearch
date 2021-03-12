@@ -2,7 +2,7 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 30/11/2018
-# Last update: 10/07/2020
+# Last update: 11/03/2021
 # Description: Codigo util, para uso general
 # sys.setdefaultencoding('utf-8') #reload(sys)
 # hash      -> hashlib https://recursospython.com/guias-y-manuales/hashlib-md5-sha/
@@ -27,7 +27,13 @@ from subprocess import Popen, PIPE
 from collections import OrderedDict
 from pygments import lexers, formatters, highlight
 from jinja2 import Environment, FileSystemLoader #pip install jinja2
-
+import hashlib
+#######################################################################################
+def get_sha256(stexto):
+    hashsha = hashlib.sha256()
+    hashsha.update(stexto.encode())
+    sha256_str = hashsha.hexdigest()
+    return sha256_str
 #######################################################################################
 def print_list(lista, num=0, sort=True):
     if(sort): lista.sort()
@@ -571,6 +577,16 @@ def list_directorio():
         print(base)
     return
 #######################################################################################
+def get_info_equipo():
+    name_device = socket.gethostname()
+    ip_device = socket.gethostbyname(name_device)
+    info_equipo = {
+        'name': name_device,
+        'ip': ip_device,
+        'platform': sys.platform
+    }
+    return info_equipo
+#######################################################################################
 def isvalidip(string_ip):
     """
     https://www.geeksforgeeks.org/python-program-to-validate-an-ip-address/
@@ -621,4 +637,3 @@ if __name__ == "__main__":
     #Testing function
     #test_hmac_json()
     list_directorio()
-
