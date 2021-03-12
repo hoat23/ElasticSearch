@@ -581,9 +581,9 @@ def get_info_equipo():
     name_device = socket.gethostname()
     ip_device = socket.gethostbyname(name_device)
     info_equipo = {
-        'name': name_device,
-        'ip': ip_device,
-        'platform': sys.platform
+        'name': "{}".format(name_device),
+        'ip': "{}".format(ip_device),
+        'platform': "{}".format(sys.platform)
     }
     return info_equipo
 #######################################################################################
