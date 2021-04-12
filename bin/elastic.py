@@ -2,7 +2,7 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 19/11/2018
-# Last update: 08/06/2020
+# Last update: 28/02/2021
 # Description: Server to conect Streak - Webhoook
 # Notes: Elastic only support binary data encoded in base64.
 # Link: https://ogma-dev.github.io/posts/simple-flask-webhook/
@@ -67,7 +67,7 @@ class elasticsearch():
     def get_url_elk(self):
         return self.url_elk
 
-    def req_get(self, URL_API,data="",timeout=None):
+    def req_get(self, URL_API,data=None,timeout=None):
         if (URL_API==None): URL_API = self.url_elk
         if (data!=None):#len(data)>0
             headers = {'Content-Type': 'application/json'}
@@ -77,8 +77,7 @@ class elasticsearch():
             rpt = requests.get( url=URL_API , auth=(self.user,self.pas), timeout=timeout)
         
         if not( (rpt.status_code)==200 or (rpt.status_code)==201 ):
-            print("[GET]: "+ str(rpt.status_code) +" | "+ str(rpt.reason))
-        
+            print("[GET]: "+ str(rpt.status_code) +" | "+ str(rpt.reason))        
         try:
             json_rpt = rpt.json()
             #json_pretty = json.loads(rpt.text)
@@ -236,6 +235,30 @@ class elasticsearch():
             self.delete_by_index(INDEX)
         return
 
+    def search_by_template(self, template_id, params, index):
+        """
+        Documentation: https://www.elastic.co/guide/en/elasticsearch/reference/current/search-template.html
+        
+        @template_id: Templates name when is create
+        @params: Params used by template
+        
+        Example:
+            template_id: "MENU_DINAMICO"
+            params: {
+                "FIELD_MENU_01": "Ruta de Aprendizaje",
+                "FIELD_MENU_02": "Curso"    
+            }
+        """
+        URL_API = "{}/{}/_search/template".format(self.url_elk, index)
+        data_json = {
+          "id": template_id,
+          "params": params
+        }
+        rpt_json = self.req_get(URL_API,data=data_json,timeout=None)
+        
+        return rpt_json
+
+
     def post_bulk(self,list_data,header_json=None,random_if_not_found_id=False):
         data2sent = ""
         start_time = time.time()
@@ -388,35 +411,15 @@ def test_conection_from_file():
 ######################################################################################
 def test():
     print("Test class elastic")
-    #ec=elasticsearch(url=URL_M,user=USER_M,pas=PASS_M)
-    URL = credentials['elastic']['url']
-    USER = credentials['elastic']['user']
-    PASS = credentials['elastic']['pasw']
-    
     ec=elasticsearch(url=URL,user=USER,pas=PASS)
     
     #ec=elasticsearch()
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cat/indices?v") #_search?pretty
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state/_all/syslog-global-write")
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/health?pretty")
-    rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state?pretty")
+    rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state")
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state/nodes/syslog-global-write")
     print_json(rpt_json)
-    
-    """
-    lista_json = loadCSVtoJSON("Todos_los_equipos_Peru.csv")
-    ec.delete_by_index("repsol")
-    ec.post_bulk(lista_json,headers={"index":{"_index":"repsol","_type":"_doc"}})
-    """
-    ##ec.process_repsol()
-    ##ec.algorithm()
-    
-    
-    #ec.get_hits(INDEX="cars",TYPE="transactions")
-    #ec.get_hits(INDEX="repsol")
-    #ec.set_data("repsoll","_doc","7x8uV2cBidP485DQW1F5", {"Versión de producto (VirusScan Enterprise)":"HOAT23"} )
-    #ec.set_data("repsoll","_doc","-x8uV2cBidP485DQW1F5", {"Versión de producto (VirusScan Enterprise)":"HOAT23"} )
-    #ec.get_by_id("cars","transactions","1")
     return
 #######################################################################################
 if __name__=="__main__":
