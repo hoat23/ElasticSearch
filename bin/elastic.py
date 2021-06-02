@@ -19,8 +19,8 @@ if not ('URL' in globals() and 'USER' in globals() and 'PASS' in globals() ):
     #URL="<elastic>" #USER="usr_elk"  #PASS="pass_elk"
     from credentials import *
 
-if not print_json:
-    from utils import *
+#if not print_json:
+#    from utils import *
 #######################################################################################
 class elasticsearch():            
     def __init__(self, url=None, user=None , pas=None, config_json=None):
