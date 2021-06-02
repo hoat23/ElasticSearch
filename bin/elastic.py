@@ -15,7 +15,8 @@ import requests
 import json
 import time
 from datetime import datetime, timedelta
-from credentials import * #URL="<elastic>" #USER="usr_elk"  #PASS="pass_elk"
+if not ('URL' in globals() and 'USER' in globals() and 'PASS' in globlas() ):
+    from credentials import * #URL="<elastic>" #USER="usr_elk"  #PASS="pass_elk"
 from utils import *
 #######################################################################################
 class elasticsearch():            
