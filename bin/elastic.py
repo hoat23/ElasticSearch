@@ -2,7 +2,7 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 19/11/2018
-# Last update: 28/02/2021
+# Last update: 11/03/2022
 # Description: Server to conect Streak - Webhoook
 # Notes: Elastic only support binary data encoded in base64.
 # Link: https://ogma-dev.github.io/posts/simple-flask-webhook/
@@ -15,12 +15,10 @@ import requests
 import json
 import time
 from datetime import datetime, timedelta
+from utils import print_json
 if not ('URL' in globals() and 'USER' in globals() and 'PASS' in globals() ):
     #URL="<elastic>" #USER="usr_elk"  #PASS="pass_elk"
     from credentials import *
-
-#if not print_json:
-#    from utils import *
 #######################################################################################
 class elasticsearch():            
     def __init__(self, url=None, user=None , pas=None, config_json=None):
@@ -271,28 +269,28 @@ class elasticsearch():
             #time.sleep(1)
             return
         cont = 0
-        for lista in list_data :
+        for one_json in list_data :
             cont = cont + 1
             header_temp = {}
             if(header_json==None):
-                # Significa que el _index, _type y _id estan especificados en list_data=[_index,_type,_id,_source]
+                # Significa que el _index, _type y _id estan especificados en list_data {_index ,_type,_id,_source} ]
                 # update -> solo actualiza algunos campos, no es necesario especificar todos los campos del doc.
                 #           {"update":{"_index":<index>,"_type":<type>,"_id":<id>}}
-                #           { "doc" :  lista["_source"] }
+                #           { "doc" :  one_json["_source"] }
                 # index  -> fuerza la actualización del documento, si el campo no existe se elimina del doc.
                 #           {"index":{"_index":<index>,"_type":<type>,"_id":<id>}}
-                #           lista["_source"]
+                #           one_json["_source"]
                 #--------------------------------------------------------------------------------
                 header_temp = {
                     "update":{ 
-                        "_index": lista["_index"],
-                        "_type" : lista["_type"],
-                        "_id" : lista["_id"],
+                        "_index": one_json["_index"],
+                        "_type" : one_json["_type"],
+                        "_id" : one_json["_id"],
                         "_source": True
                     }
                 }
                 #--------------------------------------------------------------------------------
-                body_temp = { "doc" :  lista["_source"] }
+                body_temp = { "doc" :  one_json["_source"] }
                 #--------------------------------------------------------------------------------
             elif 'index' in header_json:
                 # header_json={"index":{"_index":"alertas","_type":"_doc","_id":"source_id"}}
@@ -300,7 +298,7 @@ class elasticsearch():
                     nameKeyToSearch = header_json['index']['_id']
                     try: 
                         # Intentamos extraer el ID de lista_data
-                        _id = "{0}".format( lista[nameKeyToSearch] )
+                        _id = "{0}".format( one_json[nameKeyToSearch] )
                     except:
                         if random_if_not_found_id :# El ID sera asignado por ELASTIC
                             _id = None # Si key=None, entonces 'renameValues' elimina dicho campo del json
@@ -309,13 +307,14 @@ class elasticsearch():
                     finally:
                         #Construimos el 'header' con la variable '_id'
                         header_temp = renameValues(header_json,nameKeyToSearch,_id)
-                        body_temp = lista
+                        if "_id" in one_json: del one_json['_id']
+                        body_temp = one_json
                 else:
                     header_temp = header_json
-                    body_temp = lista    
+                    body_temp = one_json    
             else:
                 header_temp = header_json
-                body_temp = lista
+                body_temp = one_json
             # Pasamos todo a string antes de ser enviada.
             data2sent = data2sent +json.dumps(header_temp)+"\n"+json.dumps(body_temp) + "\n"
         URL = self.url_elk + "/_bulk"
@@ -323,9 +322,11 @@ class elasticsearch():
         elapsed_time = time.time() - start_time
         print("[POST_BULK] Elapsed time : %.10f seconds\n" % elapsed_time)
         #print_json(rpt_json)
+        #print(data2sent)
         if 'errors' in rpt_json:
             if rpt_json['errors']== True:
                 print_json(rpt_json)
+                #print("POST_BULK | data send:")
         return rpt_json
     
     def algorithm(self,data):
