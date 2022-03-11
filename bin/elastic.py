@@ -106,7 +106,6 @@ class elasticsearch():
     def req_post(self, URL_API, data,timeout=None):
         if (URL_API==None): URL_API = self.url_elk
         headers =  {'Content-Type': 'application/json'}
-        if (URL_API==None): URL_API = self.url_elk
         if type(data) != str :
             data = json.dumps(data)
         rpt = requests.post(URL_API, auth=(self.user,self.pas), headers=headers, data = data , timeout=timeout)
@@ -151,6 +150,11 @@ class elasticsearch():
     def get_search(self, body_query, index):
         URL = "{0}/{1}/_search".format (self.url_elk,index)
         json_rpt = self.req_get(URL, data = body_query)
+        return json_rpt
+    
+    def delete_by_query(self, body_query, index):
+        URL = "{0}/{1}/_delete_by_query".format (self.url_elk,index)
+        json_rpt = self.req_post(URL, data = body_query)
         return json_rpt
 
     def show_all_idx(self, INDEX="", TYPE="" ):
