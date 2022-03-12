@@ -16,6 +16,7 @@ import json
 import time
 from datetime import datetime, timedelta
 from utils import print_json
+from utils import renameValues
 if not ('URL' in globals() and 'USER' in globals() and 'PASS' in globals() ):
     #URL="<elastic>" #USER="usr_elk"  #PASS="pass_elk"
     from credentials import *
@@ -320,6 +321,8 @@ class elasticsearch():
                 header_temp = header_json
                 body_temp = one_json
             # Pasamos todo a string antes de ser enviada.
+            if "_id" in body_temp:
+                del body_temp['_id']
             data2sent = data2sent +json.dumps(header_temp)+"\n"+json.dumps(body_temp) + "\n"
         URL = self.url_elk + "/_bulk"
         rpt_json = self.req_post(URL , data2sent )
@@ -426,7 +429,7 @@ def test():
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cat/indices?v") #_search?pretty
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state/_all/syslog-global-write")
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/health?pretty")
-    rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state")
+    #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state")
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state/nodes/syslog-global-write")
     print_json(rpt_json)
     return
