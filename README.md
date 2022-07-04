@@ -1,4 +1,4 @@
-# Elasticsearch
+# ElasticSearch
 
 Elastic Support Matrix at https://www.elastic.co/support/matrix. The installation instructions for all the supported platforms can be found in the Installing Elasticsearch documentation https://www.elastic.co/guide/en/elasticsearch/reference/7.0/install-elasticsearch.html
 
@@ -90,4 +90,6 @@ The ifnormation is represented as nodes of a graph and its realizations with the
 ## DB Object Oriented 
 Information is represented by objects, similar to object-oriented programming languages. Examples: Zope, Gemstone or DB4o.
 
+## Documentation
+- https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html
 
