@@ -2,8 +2,9 @@
 #########################################################################################
 # Developer: Deiner Zapata Silva.
 # Date: 30/11/2018
-# Last update: 11/03/2021
+# Last update: 16/07/2021
 # Description: Codigo util, para uso general
+#########################################################################################
 # sys.setdefaultencoding('utf-8') #reload(sys)
 # hash      -> hashlib https://recursospython.com/guias-y-manuales/hashlib-md5-sha/
 # crypto    -> DES https://www.laurentluce.com/posts/python-and-cryptography-with-pycrypto/
@@ -257,7 +258,25 @@ def list2json(list_field, list_value,remove_char=None,type_data=None,return_err=
     else:
         return data_json
 #######################################################################################
+def read_txt_2_json(path, encoding='utf-8') -> dict:
+	data_json = {}
+	with open(path, encoding=encoding) as f:
+		contents = f.read()
+	data_json = json.loads(contents)
+	return data_json
+#######################################################################################
 def loadCSVtoJSON(path,encoding="utf-8",field_size_limit=100000000):
+    """Read a file json file
+    and return a ditionary in dictionary type.
+
+    Parámetros:
+    path             -- fullpath to the file
+    encoding         -- characters encoding
+    field_size_limit -- define limit of bytes by file
+
+    Excepciones:
+    Anything
+    """
     csvfile = open(path,encoding=encoding)
     csv.field_size_limit(field_size_limit)
     data = csv.DictReader(csvfile)#,delimiter =";",quotechar=";")
@@ -577,13 +596,21 @@ def list_directorio():
         print(base)
     return
 #######################################################################################
-def get_info_equipo():
-    name_device = socket.gethostname()
-    ip_device = socket.gethostbyname(name_device)
+def get_info_equipo(flag_rt=False):
+    """
+    Check information about device, please don't use this function many times, because overload the system.
+    """
+    platform = 'Default'
+    name_device = "Default"
+    ip_device = '127.0.0.1' #socket.gethostbyname(name_device)
+
+    if flag_rt:
+        name_device = socket.gethostname()
+        platform = sys.platform
     info_equipo = {
         'name': "{}".format(name_device),
         'ip': "{}".format(ip_device),
-        'platform': "{}".format(sys.platform)
+        'platform': "{}".format(platform)
     }
     return info_equipo
 #######################################################################################
