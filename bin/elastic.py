@@ -10,16 +10,28 @@
 # {'index.routing.allocation.include.instance_configuration':'aws.data.highstorage.d2'}
 ########### from flask import Flask, request, abort
 #########################################################################################
+from urllib.request import urlopen
+def load_code_from_url(url_path):
+  code_str = urlopen(url_path).read()
+  code_str = code_str.decode('utf-8')
+  return code_str
+#########################################################################################
+code_str = load_code_from_url("https://raw.githubusercontent.com/hoat23/ElasticSearch/master/bin/utils.py")
+exec(code_str)
+#########################################################################################
+# from utils import print_json, renameValues, loadYMLtoJSON
+#########################################################################################
 import sys
 import requests
 import json
 import time
 from datetime import datetime, timedelta
-from utils import print_json
-from utils import renameValues
+
 if not ('URL' in globals() and 'USER' in globals() and 'PASS' in globals() ):
     #URL="<elastic>" #USER="usr_elk"  #PASS="pass_elk"
-    from credentials import *
+    from credentials import URL
+    from credentials import USER
+    from credentials import PASS
 #######################################################################################
 class elasticsearch():            
     def __init__(self, url=None, user=None , pas=None, config_json=None):
@@ -429,7 +441,7 @@ def test():
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cat/indices?v") #_search?pretty
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state/_all/syslog-global-write")
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/health?pretty")
-    #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state")
+    rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state")
     #rpt_json = ec.req_get(ec.get_url_elk() + "/_cluster/state/nodes/syslog-global-write")
     print_json(rpt_json)
     return
