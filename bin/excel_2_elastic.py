@@ -136,6 +136,9 @@ def get_dataframe(hoja1='usuarios', hoja2='cursos', key_join='Menu', excelname='
 	return result
 ######################################################################################
 if __name__=='__main__':
+	print("EXCEL TO ELASTIC - SUCESS IMPORT")
+	# dejarlo comentado, para importar in errores el codigo en new_message
+	"""
 	import json
 	#Loading to Elastic
 	es_conector=None
@@ -147,9 +150,7 @@ if __name__=='__main__':
 	#pandas_to_eland(df_result, index_name, es_conector=None, es_if_exists="replace", es_refresh=True) ##replace append
 	df_excel.head()
 	#json(es_connector.indices.get_mapping(index=index_name))
-
-
-
+	"""
 
 # Declara un objeto de la clase Bar(). En cada ciclo la barra
 # muestra una porción hasta llegar a su máxima longitud en el 
