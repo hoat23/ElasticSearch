@@ -41,11 +41,12 @@ import re
 import os
 from credentials import *
 ######################################################################################
+if not ('ELASTIC' in globals()):
+	from credentials import ELASTIC
 
 CLUSTER_ENDPOINT = ELASTIC['URL']
 ID = ELASTIC['ID']
 API_KEY = ELASTIC['API_KEY']
-
 ######################################################################################
 def get_elastic_conector(es_conector):
 	if es_conector==None:
