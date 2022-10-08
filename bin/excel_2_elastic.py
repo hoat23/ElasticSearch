@@ -31,7 +31,7 @@ from datetime import timezone
 from urllib.request import urlopen
 from elasticsearch import Elasticsearch
 from eland.conftest import *
-import datetime
+from datetime import datetime
 import pandas as pd
 import eland as ed
 import pandas as pd
@@ -130,7 +130,7 @@ def get_dataframe(hoja1='usuarios', hoja2='cursos', key_join='Menu', excelname='
 	#result.head(5)
 
 	if flgtimestamp:
-		fecha = datetime.datetime.now().isoformat() #now(timezone.utc)
+		fecha = datetime.now().isoformat() #now(timezone.utc)
 		result['@timestamp'] = "{}".format( fecha )
 		print("get_dataframe | timestamp | {}".format( fecha ))
 	return result
